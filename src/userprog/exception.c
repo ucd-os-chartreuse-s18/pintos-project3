@@ -2,9 +2,13 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include "userprog/gdt.h"
+#include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-#include "userprog/syscall.h"
+#include "threads/vaddr.h"
+#include "threads/palloc.h"
+#include "threads/pte.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -139,7 +143,26 @@ page_fault (struct intr_frame *f)
   
   /* Turn interrupts back on (they were only off so that we could
      be assured of reading CR2 before it changed). */
+  //intr_enable (); //active pagedir
+  
+  //check bounds,
+  //see "install_page"
+  uint32_t* pagedir = active_pd (); //active pd is static
+  
+  //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
+  void* upage = pg_round_down (fault_addr);
+  void* kpage = palloc_get_page (PAL_USER);
+  //printf ("pagedir: %p\nupage: %p\nkpage: %p\n\n", pagedir, upage, kpage);
+  bool status = pagedir_set_page (pagedir, upage, kpage, false);
+  //printf ("E\n");
+  
   intr_enable ();
+  
+  if (status) {
+    //printf ("Did good.\n");
+  } else printf ("Did bad.");
+  return;
+  //fault_addr
   
   /* Count page faults. */
   page_fault_cnt++;

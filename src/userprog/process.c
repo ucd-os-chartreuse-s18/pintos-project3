@@ -548,11 +548,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
 
       /* Add the page to the process's address space. */
+      /*
       if (!install_page (upage, kpage, writable))
-        {
-          palloc_free_page (kpage);
+      {
+          //palloc_free_page (kpage);
           return false;
-        }
+      } */
 
       /* Advance. */
       read_bytes -= page_read_bytes;
@@ -599,7 +600,8 @@ setup_stack (void **esp_, const char *cmdline)
   if (kpage != NULL) {
       
       upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
-      success = install_page (upage, kpage, true);
+      //success = install_page (upage, kpage, true);
+      success = true;
       if (success) {
         
         esp = PHYS_BASE;

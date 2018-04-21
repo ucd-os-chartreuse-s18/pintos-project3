@@ -131,15 +131,15 @@ load_ () {
     return 0
   fi
   
-  if [ ! -d ~/pintos/src/userprog/build ]; then
+  if [ ! -d $BUILD ]; then
     echo "Build directory doesn't exist. Make pintos before loading the disk."
-  elif [ ! -f ~/pintos/src/userprog/build/filesys.dsk ]; then
+  elif [ ! -f $BUILD/filesys.dsk ]; then
     echo "The disk has not been build yet. Make the disk before loading."
   else
     
     #NOTE: This will not work for files with spaces in the name.
     
-    cd ~/pintos/src/userprog/build
+    cd $BUILD
     
     #Is the config buildpath asked for?
     if [ `basename $USER_BUILDPATH` = $1 ]; then
@@ -244,7 +244,7 @@ run_ () {
     
     #This will change between pintos projects.
     #Alternatively, have config var be 1-4 to specify project number
-    DIR=~/pintos/src/userprog #TODO put into config
+    DIR=~/pintos/src/vm #TODO put into config
     
     TEST_SUBDIRS=`cat $DIR/Make.vars | grep "TEST_SUBDIRS"`
     TEST_SUBDIRS=`echo $TEST_SUBDIRS | sed -e "s, = ,=,g" | sed -e "s,TEST_SUBDIRS=,,g"`
@@ -277,7 +277,7 @@ run_ () {
     #tests/userprog/multi-recurse_ARGS = 15
     
     #Going to build because the previous script did this.
-    cd ~/pintos/src/userprog/build
+    cd $BUILD
     
     #I am putting every file that is needed across all tests.
     #This allows me to run any test, but in the future I should
@@ -352,7 +352,8 @@ clean_ () {
   
   case $1 in
     pintos )
-    cd ~/pintos/src/userprog
+    #TODO add project directory to config
+    cd ~/pintos/src/vm
     make clean;;
     disk ) clean_dsk;;
     * )
@@ -431,10 +432,10 @@ config_ () {
 
 make_dsk () {
   #How to silence warnings?
-  if [ ! -d ~/pintos/src/userprog/build ]; then
+  if [ ! -d $BUILD ]; then
     echo "Build directory doesn't exist. Make pintos before making the disk."
   else
-    cd ~/pintos/src/userprog/build
+    cd $BUILD
     pintos-mkdisk filesys.dsk --filesys-size=2
     pintos -v -- -f -q
     echo -e "\nDisk created sucessfully.\n"
@@ -442,13 +443,15 @@ make_dsk () {
 }
 
 clean_dsk () {
-  if [ ! -f ~/pintos/src/userprog/build/filesys.dsk ]; then
+  if [ ! -f $BUILD/filesys.dsk ]; then
     echo "There is no disk to remove in the build directory."
   else
-    cd ~/pintos/src/userprog/build
+    cd $BUILD
     rm filesys.dsk
   fi
 }
+
+BUILD=~/pintos/src/vm/build
 
 main () {
   
