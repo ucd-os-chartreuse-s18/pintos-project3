@@ -600,7 +600,10 @@ setup_stack (void **esp_, const char *cmdline)
   if (kpage != NULL) {
       
       upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
-      //success = install_page (upage, kpage, true);
+      
+      /* From the manual: "All pages can be loaded lazily, except the first
+       * user stack page which can be loaded in setup_stack() */
+      success = install_page (upage, kpage, true);
       success = true;
       if (success) {
         

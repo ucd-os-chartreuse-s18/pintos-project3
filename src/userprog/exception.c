@@ -147,20 +147,22 @@ page_fault (struct intr_frame *f)
   
   //check bounds,
   //see "install_page"
-  uint32_t* pagedir = active_pd (); //active pd is static
   
+  /* active_pd was originally made static, but I removed the static qualifier
+   * so that I can use it here. */
+  uint32_t* pagedir = active_pd (); //active pd is static
   //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
+  
   void* upage = pg_round_down (fault_addr);
   void* kpage = palloc_get_page (PAL_USER);
   //printf ("pagedir: %p\nupage: %p\nkpage: %p\n\n", pagedir, upage, kpage);
   bool status = pagedir_set_page (pagedir, upage, kpage, false);
-  //printf ("E\n");
   
   intr_enable ();
   
   if (status) {
-    //printf ("Did good.\n");
-  } else printf ("Did bad.");
+    printf ("Did good.\n");
+  } else printf ("Did bad.\n");
   return;
   //fault_addr
   

@@ -5,6 +5,7 @@
 #include "threads/init.h"
 #include "threads/pte.h"
 #include "threads/palloc.h"
+#include <stdio.h> //debug
 
 //static uint32_t *active_pd (void);
 static void invalidate_pagedir (uint32_t *);
@@ -107,9 +108,13 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (pd != init_page_dir);
     
   pte = lookup_page (pd, upage, true);
-    
+  printf ("p: %p, d: %d\n", pte, *pte);
+  printf ("%d\n", PTE_P);
+  
   if (pte != NULL)
     {
+      /* Assert that the address is not present before we create
+       * a new user page. */
       ASSERT ((*pte & PTE_P) == 0);
       *pte = pte_create_user (kpage, writable);
       return true;
