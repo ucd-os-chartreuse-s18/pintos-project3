@@ -141,16 +141,45 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
   
-  /* Turn interrupts back on (they were only off so that we could
-     be assured of reading CR2 before it changed). */
-  //intr_enable (); //active pagedir
+  /*
+  (from the manual on Managing the Supplemental Page Table)
+  There are some extra conditions that arrive if we implement "sharing". I did
+  not include them here since even if we implement sharing, we likely won't need
+  to worry about it yet.
   
-  //check bounds,
-  //see "install_page"
+  1. Locate the page that faulted in the supplemental page table. If the memory
+  reference is valid, use the supplemental page table entry to locate the data
+  that goes in the page, which might be in the file system, or in a swap slot,
+  or it might simply be an all-zero page.
+  
+  If the supplemental page table indicates that the user process should not
+  expect any data at the address it was trying to access, or if the page lies
+  within kernel virtual memory, or if the access is an attempt to write to a
+  read-only page, then the access is invalid. Any invalid access terminates
+  the process and thereby frees all its resources.
+  
+  2. Obtain a frame to store the page (I think this means a kpage). See section
+  4.1.5 [Managing the Frame Table] for details.
+  
+  3. Fetch the data into a frame, by reading it from the file system or swap,
+  zeroing it, etc.
+  
+  4. Point the page table entry for the faulting virtual address to the physical
+  page. You can use the functions in `userprog/pagedir.c`
+  
+  Note:
+  It seems we're close to reaching what is specified by the manual to achieve
+  lazy loading. We might just need to utilize the supplementary page table?
+  */
+  
+  //see "install_page", which calls pagedir_set_page
   
   /* active_pd was originally made static, but I removed the static qualifier
-   * so that I can use it here. */
-  uint32_t* pagedir = active_pd (); //active pd is static
+   * so that I can use it here. We might need to do it a different way. */
+  uint32_t* pagedir = active_pd ();
+  
+  /* I tried to clear the lower bits of the fault address to get a page directory
+   * boundary. I'm abandoning it for now since active_pd should work for now. */
   //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
   
   void* upage = pg_round_down (fault_addr);
@@ -158,6 +187,12 @@ page_fault (struct intr_frame *f)
   //printf ("pagedir: %p\nupage: %p\nkpage: %p\n\n", pagedir, upage, kpage);
   bool status = pagedir_set_page (pagedir, upage, kpage, false);
   
+  /* Turn interrupts back on (they were only off so that we could
+   * be assured of reading CR2 before it changed). EDIT: We may
+   * need to synchronize a bit of the new implementation. I'm not
+   * sure what that entails 100%, so we'll put it all behind the
+   * interrupt disable for now. (this might cause a problem though
+   * if this is actually incorrect) */
   intr_enable ();
   
   if (status) {
