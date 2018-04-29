@@ -259,7 +259,7 @@ void
 process_activate (void)
 {
   struct thread *t = thread_current ();
-
+  //printf ("context switch! (%s leaving)\n", t->name);
   /* Activate thread's page tables. */
   pagedir_activate (t->pagedir);
 
@@ -549,34 +549,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       
       printf ("CREATING: upage: %p, file: %p, bytes: %d\n",
           upage, file, page_read_bytes);
+      //Put into supplemental page table
       create_spt_entry(upage, IN_FILE, f_info);
-      ofs += page_read_bytes;
-      /*
-      uint8_t *kpage = palloc_get_page (PAL_USER);
-      if (kpage == NULL)
-        return false;
-      */
-      /*
-      // Load this page.
-      if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
-      {
-          palloc_free_page (kpage);
-          return false;
-      }
-      memset (kpage + page_read_bytes, 0, page_zero_bytes);
-      */
-      
-      /* Add the page to the process's address space. */
-      /*
-      if (!install_page (upage, kpage, writable))
-      {
-          //palloc_free_page (kpage);
-          return false;
-      } //*/
 
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
+      ofs += page_read_bytes;
       upage += PGSIZE;
   }
   return true;

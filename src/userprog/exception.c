@@ -145,24 +145,9 @@ page_fault (struct intr_frame *f)
   
   /* Turn interrupts back on (they were only off so that we could
    * be assured of reading CR2 before it changed). */
-  //intr_enable ();
+  intr_enable ();
   
   /*
-  (from the manual on Managing the Supplemental Page Table)
-  There are some extra conditions that arrive if we implement "sharing". I did
-  not include them here since even if we implement sharing, we likely won't need
-  to worry about it yet.
-  
-  1. Locate the page that faulted in the supplemental page table. If the memory
-  reference is valid, use the supplemental page table entry to locate the data
-  that goes in the page, which might be in the file system, or in a swap slot,
-  or it might simply be an all-zero page.
-  
-  If the supplemental page table indicates that the user process should not
-  expect any data at the address it was trying to access, or if the page lies
-  within kernel virtual memory, or if the access is an attempt to write to a
-  read-only page, then the access is invalid.
-  
   2. Obtain a frame to store the page (I think this means a kpage). See section
   4.1.5 [Managing the Frame Table] for details.
   
@@ -172,12 +157,6 @@ page_fault (struct intr_frame *f)
   4. Point the page table entry for the faulting virtual address to the physical
   page. You can use the functions in `userprog/pagedir.c`
   */
-    
-  //This should get the thread that the interrupt took over.
-  //struct thread *tc = thread_current();
-  //uint32_t *pagedir = tc->pagedir;
-  intr_enable ();
-  //printf ("faulting pagedir is %p\n", pagedir);
   
   /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
@@ -187,18 +166,54 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
   
+  printf ("\t%s is faulting!\n", thread_current()->name);
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
   
+  //gives infinite loop as expected
+  //return;
+  
   if (!not_present || fault_addr == NULL) {
     kill (f);
   }
-  
-  void* upage = fault_addr; //pg_round_down (fault_addr);
+  void* upage = pg_round_down (fault_addr);
   bool good = page_in (upage);
+  //printf ("%p should be loaded now\n", upage);
+  
+  //*
+  //All of this stuff is to show that after a page fault, we still retain
+  //all data and mappings.
+  struct thread *tc = thread_current ();
+  struct hash *h = &tc->pages;
+  struct hash_elem *e = hash_lookup_key (h, (int) upage);
+  if (e == NULL) {
+    printf ("hash not found!\n");
+    kill (f);
+  }
+  struct page *p = hash_entry (e, struct page, elem);
+  //struct file_info *fi = p->file_info; (for full dump)
+  printf ("Hex dump:\n");
+  //*/
+  /* a) Hex address to start counting from.
+   * b) Hex address to actually get data from.
+   * c) Number of bytes to write (should match the amount you wrote)
+   * d) Show ASCII
+   *                    a)       b)       c)           d)
+   *                    |        |        |            |
+   *                    v        v        v            v */
+  //The very first entries in kpage are zeroes..
+  //hex_dump ((uintptr_t) p->frame, p->frame, fi->file_bytes, true);
+  
+  //rights violation error writing page in kernel context.
+  //memset (p->upage, 'a', 12); //writing to upage doesn't work (just how it works?)
+  //memset (p->frame, 'a', 12); //writing to frame writes to upage as well
+  
+  //hex_dump ((uintptr_t) p->frame, p->frame, 64, true);
+  //hex_dump ((uintptr_t) p->upage, p->upage, 64, true);
+  
   if (!good) {
     printf ("Paging in failed.\n");
     kill (f);

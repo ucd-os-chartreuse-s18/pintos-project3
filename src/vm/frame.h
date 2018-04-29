@@ -26,7 +26,6 @@ we are using is making new data that palloc isn't using. NOTE: This data structu
 is globally-defined.
 */
 
-//NOT ALLOCATED UNTIL FAULT!!
 struct frame {
     uint32_t *kpage;
     

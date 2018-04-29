@@ -55,7 +55,8 @@ struct page {
   
   /* Set only in owning process context with frame->lock held
   * Cleared only with scan_lock and frame->lock held. */
-  struct frame *frame;
+  //struct frame *frame;
+  uint32_t *frame; //kpage
   
   /* Swap information, protected by frame->lock. */
   block_sector_t sector;      /* Starting sector of swap area, or -1 */
