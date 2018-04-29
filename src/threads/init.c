@@ -22,6 +22,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -31,11 +32,16 @@
 #else
 #include "tests/threads/tests.h"
 #endif
+
 #ifdef FILESYS
 #include "devices/block.h"
 #include "devices/ide.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
+#endif
+
+#ifdef VM
+#include "vm/frame.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -98,13 +104,13 @@ main (void)
   palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
-
+  
   /* Segmentation. */
 #ifdef USERPROG
   tss_init ();
   gdt_init ();
 #endif
-
+  
   /* Initialize interrupt handlers. */
   intr_init ();
   timer_init ();
@@ -121,6 +127,10 @@ main (void)
    * initialized in process_start. */
   thread_hash_init ();
   
+#ifdef VM
+  falloc_init ();
+#endif
+
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
   serial_init_queue ();

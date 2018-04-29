@@ -164,6 +164,15 @@ syscall_handler (struct intr_frame *f)
   
 }
 
+/* Added for the mmap syscall. This was created following Ivo's manual. */
+struct mapping {
+    struct list_elem elem;    /* List element. */
+    int handle;               /* Mapping id. */
+    struct file *file;        /* File. */
+    uint8_t *base;            /* Start of memory mapping. */
+    size_t page_cnt;          /* Number of pages mapped. */
+};
+
 static int sys_unimplemented (void) {
   printf ("Warning: A syscall was called that hasn't been implemented yet.\n");
   return EXIT_FAILURE;

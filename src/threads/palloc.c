@@ -73,29 +73,24 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
   struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
   void *pages;
   size_t page_idx;
-
-  if (page_cnt == 0)
-    return NULL;
-
+  
+  if (page_cnt == 0) return NULL;
+  
   lock_acquire (&pool->lock);
   page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
   lock_release (&pool->lock);
-
+  
   if (page_idx != BITMAP_ERROR)
     pages = pool->base + PGSIZE * page_idx;
-  else
-    pages = NULL;
-
-  if (pages != NULL) 
-    {
-      if (flags & PAL_ZERO)
-        memset (pages, 0, PGSIZE * page_cnt);
-    }
-  else 
-    {
-      if (flags & PAL_ASSERT)
-        PANIC ("palloc_get: out of pages");
-    }
+  else pages = NULL;
+  
+  if (pages != NULL) {
+    if (flags & PAL_ZERO)
+      memset (pages, 0, PGSIZE * page_cnt);
+  } else {
+    if (flags & PAL_ASSERT)
+      PANIC ("palloc_get: out of pages");
+  }
 
   return pages;
 }
@@ -110,7 +105,8 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 void *
 palloc_get_page (enum palloc_flags flags) 
 {
-  return palloc_get_multiple (flags, 1);
+  void *pg = palloc_get_multiple (flags, 1);
+  return pg;
 }
 
 /* Frees the PAGE_CNT pages starting at PAGES. */
@@ -119,24 +115,24 @@ palloc_free_multiple (void *pages, size_t page_cnt)
 {
   struct pool *pool;
   size_t page_idx;
-
+  
   ASSERT (pg_ofs (pages) == 0);
   if (pages == NULL || page_cnt == 0)
     return;
-
+  
   if (page_from_pool (&kernel_pool, pages))
     pool = &kernel_pool;
   else if (page_from_pool (&user_pool, pages))
     pool = &user_pool;
   else
     NOT_REACHED ();
-
+  
   page_idx = pg_no (pages) - pg_no (pool->base);
-
+  
 #ifndef NDEBUG
   memset (pages, 0xcc, PGSIZE * page_cnt);
 #endif
-
+  
   ASSERT (bitmap_all (pool->used_map, page_idx, page_cnt));
   bitmap_set_multiple (pool->used_map, page_idx, page_cnt, false);
 }

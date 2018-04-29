@@ -1,10 +1,16 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "userprog/gdt.h"
+#include "userprog/pagedir.h"
+#include "userprog/syscall.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
-#include "userprog/syscall.h"
+#include "threads/vaddr.h"
+#include "threads/palloc.h"
+#include "threads/pte.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -109,6 +115,16 @@ kill (struct intr_frame *f)
     }
 }
 
+static void
+fault(void *f, void* fault_addr, bool not_present, bool write, bool user) {
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+          fault_addr,
+          not_present ? "not present" : "rights violation",
+          write ? "writing" : "reading",
+          user ? "user" : "kernel");
+  kill (f);
+}
+
 /* Page fault handler.  This is a skeleton that must be filled in
    to implement virtual memory.  Some solutions to project 2 may
    also require modifying this code.
@@ -138,10 +154,10 @@ page_fault (struct intr_frame *f)
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
   
   /* Turn interrupts back on (they were only off so that we could
-     be assured of reading CR2 before it changed). */
+   * be assured of reading CR2 before it changed). */
   intr_enable ();
   
-  /* Count page faults. */
+  /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
   
   /* Determine cause. */
@@ -149,14 +165,15 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
   
-  /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
+  if (!not_present || fault_addr == NULL) {
+    fault(f, fault_addr, not_present, write, user);
+  }
   
-  kill (f);
+  void* upage = pg_round_down (fault_addr);
+  bool good = page_in (upage);
+  
+  if (!good) {
+    fault(f, fault_addr, not_present, write, user);
+  }
 }
+

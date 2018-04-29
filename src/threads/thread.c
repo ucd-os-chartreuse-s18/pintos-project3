@@ -124,6 +124,7 @@ void thread_hash_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
   keyed_hash_init (&thread_current ()->open_files_hash);
   keyed_hash_init (&thread_current ()->children_hash);
+  keyed_hash_init (&thread_current ()->pages);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -182,7 +183,7 @@ thread_create (const char *name, int priority,
   tid_t tid;
 
   ASSERT (function != NULL);
-
+  
   /* Allocate thread. */
   t = palloc_get_page (PAL_ZERO);
   if (t == NULL)
