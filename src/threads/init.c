@@ -22,6 +22,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -31,11 +32,16 @@
 #else
 #include "tests/threads/tests.h"
 #endif
+
 #ifdef FILESYS
 #include "devices/block.h"
 #include "devices/ide.h"
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
+#endif
+
+#ifdef VM
+#include "vm/frame.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -120,8 +126,11 @@ main (void)
    * The hash tables for all other processes will need to be
    * initialized in process_start. */
   thread_hash_init ();
-  falloc_init ();
   
+#ifdef VM
+  falloc_init ();
+#endif
+
   /* Start thread scheduler and enable interrupts. */
   thread_start ();
   serial_init_queue ();

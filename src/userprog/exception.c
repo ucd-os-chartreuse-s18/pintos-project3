@@ -115,6 +115,16 @@ kill (struct intr_frame *f)
     }
 }
 
+static void
+fault(void *f, void* fault_addr, bool not_present, bool write, bool user) {
+  printf ("Page fault at %p: %s error %s page in %s context.\n",
+          fault_addr,
+          not_present ? "not present" : "rights violation",
+          write ? "writing" : "reading",
+          user ? "user" : "kernel");
+  kill (f);
+}
+
 /* Page fault handler.  This is a skeleton that must be filled in
    to implement virtual memory.  Some solutions to project 2 may
    also require modifying this code.
@@ -147,17 +157,6 @@ page_fault (struct intr_frame *f)
    * be assured of reading CR2 before it changed). */
   intr_enable ();
   
-  /*
-  2. Obtain a frame to store the page (I think this means a kpage). See section
-  4.1.5 [Managing the Frame Table] for details.
-  
-  3. Fetch the data into a frame, by reading it from the file system or swap,
-  zeroing it, etc.
-  
-  4. Point the page table entry for the faulting virtual address to the physical
-  page. You can use the functions in `userprog/pagedir.c`
-  */
-  
   /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
   
@@ -166,59 +165,15 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
   
-  printf ("\t%s is faulting!\n", thread_current()->name);
-  printf ("Page fault at %p: %s error %s page in %s context.\n",
-          fault_addr,
-          not_present ? "not present" : "rights violation",
-          write ? "writing" : "reading",
-          user ? "user" : "kernel");
-  
-  //gives infinite loop as expected
-  //return;
-  
   if (!not_present || fault_addr == NULL) {
-    kill (f);
+    fault(f, fault_addr, not_present, write, user);
   }
+  
   void* upage = pg_round_down (fault_addr);
   bool good = page_in (upage);
-  //printf ("%p should be loaded now\n", upage);
-  
-  //*
-  //All of this stuff is to show that after a page fault, we still retain
-  //all data and mappings.
-  struct thread *tc = thread_current ();
-  struct hash *h = &tc->pages;
-  struct hash_elem *e = hash_lookup_key (h, (int) upage);
-  if (e == NULL) {
-    printf ("hash not found!\n");
-    kill (f);
-  }
-  struct page *p = hash_entry (e, struct page, elem);
-  //struct file_info *fi = p->file_info; (for full dump)
-  printf ("Hex dump:\n");
-  //*/
-  /* a) Hex address to start counting from.
-   * b) Hex address to actually get data from.
-   * c) Number of bytes to write (should match the amount you wrote)
-   * d) Show ASCII
-   *                    a)       b)       c)           d)
-   *                    |        |        |            |
-   *                    v        v        v            v */
-  //The very first entries in kpage are zeroes..
-  //hex_dump ((uintptr_t) p->frame, p->frame, fi->file_bytes, true);
-  
-  //rights violation error writing page in kernel context.
-  //memset (p->upage, 'a', 12); //writing to upage doesn't work (just how it works?)
-  //memset (p->frame, 'a', 12); //writing to frame writes to upage as well
-  
-  //hex_dump ((uintptr_t) p->frame, p->frame, 64, true);
-  //hex_dump ((uintptr_t) p->upage, p->upage, 64, true);
   
   if (!good) {
-    printf ("Paging in failed.\n");
-    kill (f);
-  } else {
-    printf ("ret\n");
+    fault(f, fault_addr, not_present, write, user);
   }
 }
 

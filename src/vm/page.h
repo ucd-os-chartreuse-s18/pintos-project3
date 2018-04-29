@@ -22,8 +22,6 @@ enum PAGE_STATUS {
     IN_SWAP  = 004
 };
 
-//This is for memory-mapped files. We may memory map files without using the
-//syscall though?
 struct file_info {
   struct file *file;          /* File. */
   off_t file_offset;          /* Offset in file. */
@@ -65,7 +63,6 @@ struct page {
 
 struct page* create_spt_entry (void*, enum PAGE_STATUS, void*);
 
-//struct page* create_spt_entry (enum PAGE_LOCATION, void* aux);
 bool page_in (void* upage);
 
 #endif

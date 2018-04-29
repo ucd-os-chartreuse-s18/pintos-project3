@@ -452,9 +452,7 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   success = true;
   file_deny_write (file);
   
-  done:
-  printf ("load complete\n");
-  
+  done:  
   /* We arrive here whether the load is successful or not. */
   t->executable = file;
   return success;
@@ -532,8 +530,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (ofs % PGSIZE == 0);
   
   file_seek (file, ofs);
-  while (read_bytes > 0 || zero_bytes > 0)
-  {
+  while (read_bytes > 0 || zero_bytes > 0) {
+      
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
          and zero the final PAGE_ZERO_BYTES bytes. */
@@ -547,15 +545,13 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       f_info->file_bytes = page_read_bytes;
       f_info->private = !writable;
       
-      printf ("CREATING: upage: %p, file: %p, bytes: %d\n",
-          upage, file, page_read_bytes);
       //Put into supplemental page table
       create_spt_entry(upage, IN_FILE, f_info);
-
+      
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
-      ofs += page_read_bytes;
+      ofs += page_read_bytes; //do we need this?
       upage += PGSIZE;
   }
   return true;
@@ -672,7 +668,7 @@ setup_stack (void **esp_, const char *cmdline)
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
-static bool
+bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
