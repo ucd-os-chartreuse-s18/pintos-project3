@@ -197,7 +197,7 @@ page_fault (struct intr_frame *f)
     kill (f);
   }
   
-  void* upage = pg_round_down (fault_addr);
+  void* upage = fault_addr; //pg_round_down (fault_addr);
   bool good = page_in (upage);
   if (!good) {
     printf ("Paging in failed.\n");
