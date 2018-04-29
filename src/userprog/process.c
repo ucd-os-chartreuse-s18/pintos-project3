@@ -20,8 +20,10 @@
 #include "threads/vaddr.h"
 #include "threads/malloc.h"
 #include "threads/synch.h"
+#include "vm/page.h"
 #include <keyed_hash.h>
 #include <hash.h>
+
 /* These values are relatively arbitrary, but seem reasonable.
  * There is an average of 16 chars availible for each argument. */
 const int MAX_ARGS = 32;
@@ -49,6 +51,8 @@ process_execute (const char *file_name)
   tid_t tid;
   
   /* Make a copy in a new page to avoid a race between the caller and load. */
+  //ALLOCATION TYPE: Kernel (so we don't have to mess with it)
+  //But: We want to book-keep its location
   argv = palloc_get_page (0);
   if (argv == NULL)
     return TID_ERROR;
@@ -132,8 +136,6 @@ start_process (void *pargs_)
    * variables from process_execute become freed here. */
   palloc_free_page ((char*) argv);
   free (pargs);
-  
-  printf ("%s successfully created!\n\n", tc->name);
   
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -526,42 +528,54 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT ((read_bytes + zero_bytes) % PGSIZE == 0);
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
-
+  
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0)
-    {
+  {
       /* Calculate how to fill this page.
          We will read PAGE_READ_BYTES bytes from FILE
          and zero the final PAGE_ZERO_BYTES bytes. */
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
-
-      /* Get a page of memory. */
+      
+      //will malloc mess up frame bookeeping?
+      struct file_info *f_info = malloc (sizeof (struct file_info));
+      f_info->file = file;
+      f_info->file_offset = ofs;
+      f_info->file_bytes = page_read_bytes;
+      f_info->private = !writable;
+      
+      //printf ("CREATING: file is %p, bytes is %d\n", f_info->file, f_info->file_bytes);
+      create_spt_entry(upage, IN_FILE, f_info);
+      ofs += page_read_bytes;
+      /*
       uint8_t *kpage = palloc_get_page (PAL_USER);
       if (kpage == NULL)
         return false;
-
-      /* Load this page. */
+      */
+      /*
+      // Load this page.
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
         {
           palloc_free_page (kpage);
           return false;
         }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
-
+      */
+      
       /* Add the page to the process's address space. */
       /*
       if (!install_page (upage, kpage, writable))
       {
           //palloc_free_page (kpage);
           return false;
-      } */
+      } //*/
 
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
       upage += PGSIZE;
-    }
+  }
   return true;
 }
 
@@ -589,7 +603,6 @@ setup_argv (const char *cmdline, int *argc, const char **argv) {
 static bool
 setup_stack (void **esp_, const char *cmdline)
 {
-  //uint8_t is a BYTE of data
   uint8_t *kpage;
   uint8_t *upage;
   bool success = false;
@@ -598,8 +611,9 @@ setup_stack (void **esp_, const char *cmdline)
   //straightforward to write it this way.
   uint8_t* esp = *esp_;
   
+  //ALLOCATION TYPE: FRAME (This one is also going to be mapped immediately)
+  //Do we have to include it as a supplemental page entry? Yes
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  printf ("addr in setup_stack is %p\n\n", kpage);
   if (kpage != NULL) {
       
       upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
@@ -680,7 +694,9 @@ static bool
 install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
-
+  
+  //Here, we should update our information in frame.c regarding mappings
+  
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL

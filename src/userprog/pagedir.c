@@ -20,7 +20,6 @@ pagedir_create (void)
   uint32_t *pd = palloc_get_page (0);
   if (pd != NULL)
     memcpy (pd, init_page_dir, PGSIZE);
-  printf ("\t(created pagedir)\n");
   return pd;
 }
 
@@ -122,8 +121,8 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (pd != init_page_dir);
   
   pte = lookup_page (pd, upage, true);
-  printf ("Paging in!\n");
-  printf ("\tpte: %p, deref: %p\n", pte, (void*) *pte);
+  //printf ("Paging in!\n");
+  //printf ("\tpte: %p, deref: %p\n", pte, (void*) *pte);
   
   if (pte != NULL)
     {

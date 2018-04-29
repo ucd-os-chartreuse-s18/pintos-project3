@@ -2,9 +2,12 @@
 #define FRAME_ALLOC_H
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <keyed_hash.h>
 #include <debug.h>
 #include "../threads/palloc.h"
+#include "../threads/thread.h"
+#include "page.h"
 
 /*
 The most important operation on the frame table is obtaining an unused frame.
@@ -23,12 +26,15 @@ we are using is making new data that palloc isn't using. NOTE: This data structu
 is globally-defined.
 */
 
+//NOT ALLOCATED UNTIL FAULT!!
 struct frame {
     uint32_t *kpage;
     
     /* From the manual: Each entry in the frame table contains a pointer to the
      * upage, if any, that currently occupy it, and other data of your choice. */
     uint32_t *upage;
+    
+    //struct lock flock;
 };
 
 //From Ivo:
@@ -37,7 +43,6 @@ struct frame {
 
 void falloc_init (void);
 void* allocate_frame (enum palloc_flags flags);
-void deallocate_frame ();
-void page_in (void* upage);
+void deallocate_frame (void*);
 
 #endif

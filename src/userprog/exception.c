@@ -1,6 +1,7 @@
 #include "userprog/exception.h"
 #include <inttypes.h>
 #include <stdio.h>
+#include <stdbool.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/syscall.h"
@@ -9,6 +10,7 @@
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
 #include "threads/pte.h"
+#include "vm/page.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -170,18 +172,11 @@ page_fault (struct intr_frame *f)
   4. Point the page table entry for the faulting virtual address to the physical
   page. You can use the functions in `userprog/pagedir.c`
   */
-  
-  //see "install_page", which calls pagedir_set_page
-  
-  /* active_pd was originally made static, but I removed the static qualifier
-   * so that I can use it here. We might need to do it a different way. */
-  //uint32_t* pagedir = active_pd ();
+    
   //This should get the thread that the interrupt took over.
-  struct thread *tc = thread_current();
-  uint32_t *pagedir = tc->pagedir;
+  //struct thread *tc = thread_current();
+  //uint32_t *pagedir = tc->pagedir;
   intr_enable ();
-  
-  //0b1100000000 0100001100 111111111100
   
   /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
@@ -197,36 +192,17 @@ page_fault (struct intr_frame *f)
           write ? "writing" : "reading",
           user ? "user" : "kernel");
   
-  if (!not_present) {
-    printf ("Only dealing with non-present errors now.\n");
-    goto kill_process;
-  }
-  if (fault_addr == NULL) {
-    goto kill_process;
+  if (!not_present || fault_addr == NULL) {
+    kill (f);
   }
   
-  /* I tried to clear the lower bits of the fault address to get a page directory
-   * boundary. I'm abandoning it for now since active_pd should work for now. */
-  //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
   void* upage = pg_round_down (fault_addr);
-  void* kpage = palloc_get_page (PAL_USER);
-  printf ("\t(bad kpage)\n");
-  /*
-  printf ("iterating thread's pagedir:\n");
-  for (int i = 0; i < 10; i++) {
-    printf ("\tpte is: %p\n", (void*) pagedir[i]);
-    printf ("\tpg is: %p\n\n", pte_get_page(pagedir[i]));
-  } */
-  
-  printf ("pagedir: %p\nupage: %p\nfault_addr: %p\n\n", pagedir, upage, fault_addr);
-  //kpage is a frame that we should have stored and can find. I am trying to see if I
-  //can do any sort of lookup
-  
-  //Returns the address of the page table entry for virtual
-  //   address VADDR in page directory PD.
-  bool status = pagedir_set_page (pagedir, upage, kpage, false);
-  
-  return;
-  kill_process:
-  kill (f);
+  bool good = page_in (upage);
+  if (!good) {
+    printf ("Paging in failed.\n");
+    kill (f);
+  } else {
+    printf ("ret\n");
+  }
 }
+

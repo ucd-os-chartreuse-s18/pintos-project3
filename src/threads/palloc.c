@@ -106,7 +106,6 @@ void *
 palloc_get_page (enum palloc_flags flags) 
 {
   void *pg = palloc_get_multiple (flags, 1);
-  printf ("palloc got %p\n", pg);
   return pg;
 }
 
@@ -116,24 +115,24 @@ palloc_free_multiple (void *pages, size_t page_cnt)
 {
   struct pool *pool;
   size_t page_idx;
-
+  
   ASSERT (pg_ofs (pages) == 0);
   if (pages == NULL || page_cnt == 0)
     return;
-
+  
   if (page_from_pool (&kernel_pool, pages))
     pool = &kernel_pool;
   else if (page_from_pool (&user_pool, pages))
     pool = &user_pool;
   else
     NOT_REACHED ();
-
+  
   page_idx = pg_no (pages) - pg_no (pool->base);
-
+  
 #ifndef NDEBUG
   memset (pages, 0xcc, PGSIZE * page_cnt);
 #endif
-
+  
   ASSERT (bitmap_all (pool->used_map, page_idx, page_cnt));
   bitmap_set_multiple (pool->used_map, page_idx, page_cnt, false);
 }
