@@ -119,7 +119,7 @@ struct thread
     struct hash open_files_hash;
     
     /* These are the new variables that are introduced in Ivo's manual */
-    //struct hash *pages;
+    //struct hash pages; //(key is upage, result is kpage)?
     //struct list mappings; //memory-mapped files
     //int next_handle
     

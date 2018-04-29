@@ -20,6 +20,7 @@ pagedir_create (void)
   uint32_t *pd = palloc_get_page (0);
   if (pd != NULL)
     memcpy (pd, init_page_dir, PGSIZE);
+  printf ("\t(created pagedir)\n");
   return pd;
 }
 
@@ -57,13 +58,26 @@ pagedir_destroy (uint32_t *pd)
 static uint32_t *
 lookup_page (uint32_t *pd, const void *vaddr, bool create)
 {
-  uint32_t *pt, *pde;
-
+  //page table
+  uint32_t *pt;
+  uint32_t *pde;
+  
   ASSERT (pd != NULL);
-
+  
   /* Shouldn't create new kernel virtual mappings. */
   ASSERT (!create || is_user_vaddr (vaddr));
-
+  
+  /* Obtains page directory index from a virtual address. */
+  //pd_no
+  
+  //Once a page is looked up, this is how you can use it:
+  /*
+  Returns true if the PTE for virtual page VPAGE in PD is dirty,
+  that is, if the page has been modified since the PTE was installed.
+  Returns false if PD contains no PTE for VPAGE. */
+  //uint32_t *pte = lookup_page (pd, vpage, false);
+  //return pte != NULL && (*pte & PTE_D) != 0;
+  
   /* Check for a page table for VADDR.
      If one is missing, create one if requested. */
   pde = pd + pd_no (vaddr);
@@ -80,7 +94,7 @@ lookup_page (uint32_t *pd, const void *vaddr, bool create)
       else
         return NULL;
     }
-
+  
   /* Return the page table entry. */
   pt = pde_get_pt (*pde);
   return &pt[pt_no (vaddr)];
@@ -106,10 +120,10 @@ pagedir_set_page (uint32_t *pd, void *upage, void *kpage, bool writable)
   ASSERT (is_user_vaddr (upage));
   ASSERT (vtop (kpage) >> PTSHIFT < init_ram_pages);
   ASSERT (pd != init_page_dir);
-    
+  
   pte = lookup_page (pd, upage, true);
-  printf ("p: %p, d: %d\n", pte, *pte);
-  printf ("%d\n", PTE_P);
+  printf ("Paging in!\n");
+  printf ("\tpte: %p, deref: %p\n", pte, (void*) *pte);
   
   if (pte != NULL)
     {

@@ -73,29 +73,24 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
   struct pool *pool = flags & PAL_USER ? &user_pool : &kernel_pool;
   void *pages;
   size_t page_idx;
-
-  if (page_cnt == 0)
-    return NULL;
-
+  
+  if (page_cnt == 0) return NULL;
+  
   lock_acquire (&pool->lock);
   page_idx = bitmap_scan_and_flip (pool->used_map, 0, page_cnt, false);
   lock_release (&pool->lock);
-
+  
   if (page_idx != BITMAP_ERROR)
     pages = pool->base + PGSIZE * page_idx;
-  else
-    pages = NULL;
-
-  if (pages != NULL) 
-    {
-      if (flags & PAL_ZERO)
-        memset (pages, 0, PGSIZE * page_cnt);
-    }
-  else 
-    {
-      if (flags & PAL_ASSERT)
-        PANIC ("palloc_get: out of pages");
-    }
+  else pages = NULL;
+  
+  if (pages != NULL) {
+    if (flags & PAL_ZERO)
+      memset (pages, 0, PGSIZE * page_cnt);
+  } else {
+    if (flags & PAL_ASSERT)
+      PANIC ("palloc_get: out of pages");
+  }
 
   return pages;
 }
@@ -110,7 +105,9 @@ palloc_get_multiple (enum palloc_flags flags, size_t page_cnt)
 void *
 palloc_get_page (enum palloc_flags flags) 
 {
-  return palloc_get_multiple (flags, 1);
+  void *pg = palloc_get_multiple (flags, 1);
+  printf ("palloc got %p\n", pg);
+  return pg;
 }
 
 /* Frees the PAGE_CNT pages starting at PAGES. */

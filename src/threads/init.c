@@ -98,13 +98,13 @@ main (void)
   palloc_init (user_page_limit);
   malloc_init ();
   paging_init ();
-
+  
   /* Segmentation. */
 #ifdef USERPROG
   tss_init ();
   gdt_init ();
 #endif
-
+  
   /* Initialize interrupt handlers. */
   intr_init ();
   timer_init ();
@@ -120,6 +120,7 @@ main (void)
    * The hash tables for all other processes will need to be
    * initialized in process_start. */
   thread_hash_init ();
+  falloc_init ();
   
   /* Start thread scheduler and enable interrupts. */
   thread_start ();

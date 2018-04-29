@@ -11,10 +11,20 @@
  * differently, this might change. I currently don't like the ambiguity
  * between the "page" we've been talking about thus far and this. */
  
- /* Question: "Allocation" in Ivo's manual refers to the initialization of
-  * this struct? Or allocation of a frame? */
+/* Question: "Allocation" in Ivo's manual refers to the initialization of
+ * this struct? Or allocation of a frame? */
+
+/* Frames are global while pages are per-process. A thread has a page hash,
+ * which corresponds to the */
+ /*
+struct page {
+  uint32_t *upage;
+  struct hash_elem elem;
+  struct frame *frame;
+} */
 
 /* Virtual page. */
+#ifdef ASDF_H
 struct page {
     
     /* Immutable members. */
@@ -40,5 +50,6 @@ struct page {
     off_t file_bytes;           /* Bytes to read/write, 1...PGSIZE. */
     
 };
+#endif
 
 #endif

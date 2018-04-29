@@ -119,7 +119,6 @@ start_process (void *pargs_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load (argv, &if_.eip, &if_.esp);
-  
   *pargs->success_ptr = success;
   sema_up (pargs->sema_ptr);
   
@@ -132,7 +131,9 @@ start_process (void *pargs_)
    * variables from process_execute become freed here. */
   palloc_free_page ((char*) argv);
   free (pargs);
-    
+  
+  printf ("%s successfully created!\n\n", tc->name);
+  
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -597,6 +598,7 @@ setup_stack (void **esp_, const char *cmdline)
   uint8_t* esp = *esp_;
   
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  printf ("addr in setup_stack is %p\n\n", kpage);
   if (kpage != NULL) {
       
       upage = ((uint8_t *) PHYS_BASE) - PGSIZE;

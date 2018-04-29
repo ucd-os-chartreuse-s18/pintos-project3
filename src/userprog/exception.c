@@ -141,6 +141,10 @@ page_fault (struct intr_frame *f)
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
   
+  /* Turn interrupts back on (they were only off so that we could
+   * be assured of reading CR2 before it changed). */
+  //intr_enable ();
+  
   /*
   (from the manual on Managing the Supplemental Page Table)
   There are some extra conditions that arrive if we implement "sharing". I did
@@ -155,8 +159,7 @@ page_fault (struct intr_frame *f)
   If the supplemental page table indicates that the user process should not
   expect any data at the address it was trying to access, or if the page lies
   within kernel virtual memory, or if the access is an attempt to write to a
-  read-only page, then the access is invalid. Any invalid access terminates
-  the process and thereby frees all its resources.
+  read-only page, then the access is invalid.
   
   2. Obtain a frame to store the page (I think this means a kpage). See section
   4.1.5 [Managing the Frame Table] for details.
@@ -166,42 +169,21 @@ page_fault (struct intr_frame *f)
   
   4. Point the page table entry for the faulting virtual address to the physical
   page. You can use the functions in `userprog/pagedir.c`
-  
-  Note:
-  It seems we're close to reaching what is specified by the manual to achieve
-  lazy loading. We might just need to utilize the supplementary page table?
   */
   
   //see "install_page", which calls pagedir_set_page
   
   /* active_pd was originally made static, but I removed the static qualifier
    * so that I can use it here. We might need to do it a different way. */
-  uint32_t* pagedir = active_pd ();
-  
-  /* I tried to clear the lower bits of the fault address to get a page directory
-   * boundary. I'm abandoning it for now since active_pd should work for now. */
-  //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
-  
-  void* upage = pg_round_down (fault_addr);
-  void* kpage = palloc_get_page (PAL_USER);
-  //printf ("pagedir: %p\nupage: %p\nkpage: %p\n\n", pagedir, upage, kpage);
-  bool status = pagedir_set_page (pagedir, upage, kpage, false);
-  
-  /* Turn interrupts back on (they were only off so that we could
-   * be assured of reading CR2 before it changed). EDIT: We may
-   * need to synchronize a bit of the new implementation. I'm not
-   * sure what that entails 100%, so we'll put it all behind the
-   * interrupt disable for now. (this might cause a problem though
-   * if this is actually incorrect) */
+  //uint32_t* pagedir = active_pd ();
+  //This should get the thread that the interrupt took over.
+  struct thread *tc = thread_current();
+  uint32_t *pagedir = tc->pagedir;
   intr_enable ();
   
-  if (status) {
-    printf ("Did good.\n");
-  } else printf ("Did bad.\n");
-  return;
-  //fault_addr
+  //0b1100000000 0100001100 111111111100
   
-  /* Count page faults. */
+  /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
   
   /* Determine cause. */
@@ -209,14 +191,42 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
   
-  /* To implement virtual memory, delete the rest of the function
-     body, and replace it with code that brings in the page to
-     which fault_addr refers. */
   printf ("Page fault at %p: %s error %s page in %s context.\n",
           fault_addr,
           not_present ? "not present" : "rights violation",
           write ? "writing" : "reading",
           user ? "user" : "kernel");
   
+  if (!not_present) {
+    printf ("Only dealing with non-present errors now.\n");
+    goto kill_process;
+  }
+  if (fault_addr == NULL) {
+    goto kill_process;
+  }
+  
+  /* I tried to clear the lower bits of the fault address to get a page directory
+   * boundary. I'm abandoning it for now since active_pd should work for now. */
+  //uint32_t* pagedir = (uint32_t*) (PDMASK & (unsigned long) fault_addr);
+  void* upage = pg_round_down (fault_addr);
+  void* kpage = palloc_get_page (PAL_USER);
+  printf ("\t(bad kpage)\n");
+  /*
+  printf ("iterating thread's pagedir:\n");
+  for (int i = 0; i < 10; i++) {
+    printf ("\tpte is: %p\n", (void*) pagedir[i]);
+    printf ("\tpg is: %p\n\n", pte_get_page(pagedir[i]));
+  } */
+  
+  printf ("pagedir: %p\nupage: %p\nfault_addr: %p\n\n", pagedir, upage, fault_addr);
+  //kpage is a frame that we should have stored and can find. I am trying to see if I
+  //can do any sort of lookup
+  
+  //Returns the address of the page table entry for virtual
+  //   address VADDR in page directory PD.
+  bool status = pagedir_set_page (pagedir, upage, kpage, false);
+  
+  return;
+  kill_process:
   kill (f);
 }
