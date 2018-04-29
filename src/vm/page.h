@@ -7,21 +7,22 @@
 #include "../devices/block.h"
 #include "../filesys/off_t.h"
 
-/* This is the struct page from Ivo's manual. If we decide to do things
- * differently, this might change. I currently don't like the ambiguity
- * between the "page" we've been talking about thus far and this. */
- 
-/* Question: "Allocation" in Ivo's manual refers to the initialization of
- * this struct? Or allocation of a frame? */
-
-/* Frames are global while pages are per-process. A thread has a page hash,
- * which corresponds to the */
- /*
+/* Frames are global while pages are per-process. */
 struct page {
-  uint32_t *upage;
-  struct hash_elem elem;
-  struct frame *frame;
-} */
+  
+  //The upage is a key. Upon faulting, the address will be used to find this page.
+  //Since it is a user page, it is not unique globally, so the hash should be per-process.
+  //We will need to access a thread's pagedir anyway to create a mapping (when paging in),
+  //so we might as well keep things consistent.
+  uint32_t *upage;                    /* hash key */
+  struct hash_elem elem;              /* corresponds to "pages" in thread.h */
+  
+  struct frame *frame;                /* castable to kpage? */
+}
+
+allocate_page () {
+    
+}
 
 /* Virtual page. */
 #ifdef ASDF_H

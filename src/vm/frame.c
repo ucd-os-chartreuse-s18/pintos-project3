@@ -13,29 +13,32 @@ void* allocate_frame (enum palloc_flags flags) {
     
     ASSERT ((flags & PAL_USER) == 0);
     
-    struct frame new_frame;
+    struct frame *new_frame;
     new_frame->kpage = palloc_get_page (flags);
     if (new_frame->kpage == NULL) {
         PANIC ("Ran out of frames!");
     }
+    
+    /* Note: Afaik we only return this so that the caller can deallocate it. */
     return new_frame->kpage;
 }
 
-//We might need to store a pagedir address, an address to the thread, or
-//otherwise be able to access the original thread's pagedir when we unmap it.
-//thread->pagedir, upage
 //pagedir_clear_page (uint32_t *pd, void *upage)
 
 void deallocate_frame () {
-    
-    //pagedir_clear_page ();
-    //Note: this is NOT related to palloc
     //The palloc-related deallocation is just setting a value in the bitmap
     //right now, I'm not worrying about the bitmap
-    
 }
 
 void page_in (void* upage) {
+    //Note: pages from files and the swap table (ie. non-frames) can be paged in
+    //in fact, if we have a mapping (to a frame), the page should not page fault!!
     
+    //We should be able to find the upage in the supplemental page table of the
+    //current thread.
 }
+
+//PALLOC: FRAMES (Availibility)
+//PAGEDIR: MAPPINGS OF FRAMES AND UPAGES
+//Note: Not every page is a frame!
 

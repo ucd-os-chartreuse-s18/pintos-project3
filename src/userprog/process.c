@@ -111,6 +111,7 @@ start_process (void *pargs_)
   struct thread *p = pargs->parent;
   keyed_hash_init (&tc->children_hash);
   keyed_hash_init (&tc->open_files_hash);
+  keyed_hash_init (&tc->pages);
   hash_insert (&p->children_hash, &tc->hash_elem);
   
   /* Initialize interrupt frame and load executable. */
