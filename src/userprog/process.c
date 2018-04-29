@@ -392,7 +392,7 @@ load (const char *cmdline, void (**eip) (void), void **esp)
       if (file_ofs < 0 || file_ofs > file_length (file))
         goto done;
       file_seek (file, file_ofs);
-
+      
       if (file_read (file, &phdr, sizeof phdr) != sizeof phdr)
         goto done;
       file_ofs += sizeof phdr;
@@ -453,6 +453,8 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   file_deny_write (file);
   
   done:
+  printf ("load complete\n");
+  
   /* We arrive here whether the load is successful or not. */
   t->executable = file;
   return success;
@@ -545,7 +547,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       f_info->file_bytes = page_read_bytes;
       f_info->private = !writable;
       
-      //printf ("CREATING: file is %p, bytes is %d\n", f_info->file, f_info->file_bytes);
+      printf ("CREATING: upage: %p, file: %p, bytes: %d\n",
+          upage, file, page_read_bytes);
       create_spt_entry(upage, IN_FILE, f_info);
       ofs += page_read_bytes;
       /*
@@ -556,10 +559,10 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       /*
       // Load this page.
       if (file_read (file, kpage, page_read_bytes) != (int) page_read_bytes)
-        {
+      {
           palloc_free_page (kpage);
           return false;
-        }
+      }
       memset (kpage + page_read_bytes, 0, page_zero_bytes);
       */
       

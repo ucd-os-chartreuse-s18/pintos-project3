@@ -57,6 +57,7 @@ bool page_in (void* upage) {
       
       //p->status = IN_FRAME;
       //p->file_info = fi; ?
+      //p->frame = kpage; ?
       break;
     case IN_FRAME:
       PANIC ("Paging-in frame. Impossible State.\n");

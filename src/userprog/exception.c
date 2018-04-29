@@ -177,6 +177,7 @@ page_fault (struct intr_frame *f)
   //struct thread *tc = thread_current();
   //uint32_t *pagedir = tc->pagedir;
   intr_enable ();
+  //printf ("faulting pagedir is %p\n", pagedir);
   
   /* Count page faults. Should we get rid of this? */
   page_fault_cnt++;
