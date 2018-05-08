@@ -156,8 +156,8 @@ page_fault (struct intr_frame *f)
   /* Turn interrupts back on (they were only off so that we could
    * be assured of reading CR2 before it changed). */
   intr_enable ();
-  
-  /* Count page faults. Should we get rid of this? */
+    
+  /* Count page faults. */
   page_fault_cnt++;
   
   /* Determine cause. */
@@ -165,7 +165,10 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
   
-  if (!not_present || fault_addr == NULL) {
+  if (!not_present) {
+    fault(f, fault_addr, not_present, write, user);
+  }
+  if (fault_addr == NULL) {
     fault(f, fault_addr, not_present, write, user);
   }
   

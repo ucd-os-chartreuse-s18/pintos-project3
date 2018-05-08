@@ -94,7 +94,7 @@ process_execute (const char *file_name)
     palloc_free_page (argv);
     free (pargs);
   }
-  
+    
   return tid;
 }
 
@@ -137,6 +137,7 @@ start_process (void *pargs_)
   palloc_free_page ((char*) argv);
   free (pargs);
   
+  printf ("starting to execute %s\n", tc->name);
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
@@ -446,9 +447,10 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   if (!setup_stack (esp, cmdline))
     goto done;
   
+  printf ("%s should be \"loaded\"\n", thread_current()->name);
+  
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
-  
   success = true;
   file_deny_write (file);
   

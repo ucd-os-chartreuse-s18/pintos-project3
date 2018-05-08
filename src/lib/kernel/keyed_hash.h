@@ -14,12 +14,16 @@ struct hash_key {
   struct hash_elem elem;
 };
 
+#include <stdio.h>
+
 /* This function can hash both complete objects and hash_keys.
  * (hash keys are castable to their raw value, and objects are
  * castable to their keys) */
 static inline unsigned
 hash_key_func (const void *a) {
   int *key = (int*) a;
+  //*key is 0?
+  //printf ("\thashing %d and %p\n", *key, *key);
   return hash_int (*key);
 }
 
@@ -28,6 +32,7 @@ static inline bool
 hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
   struct hash_key *t1 = hash_entry (a, struct hash_key, elem);
   struct hash_key *t2 = hash_entry (b, struct hash_key, elem);
+  //printf ("cmp %p %p\n", (void*) t1->key, (void*) t2->key);
   return t1->key < t2->key;
 }
 

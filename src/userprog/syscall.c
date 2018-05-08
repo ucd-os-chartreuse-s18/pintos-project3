@@ -196,6 +196,7 @@ static int sys_exec (const char *file) {
   if (file == NULL || file[1] == '\0')
     sys_exit (-1);
   
+  printf ("try to load %s\n", file);
   return process_execute (file);
 }
 
@@ -253,6 +254,7 @@ static int sys_filesize (int fd) {
 }
 
 static int sys_read (int fd, void *buffer, unsigned size) {
+  
   if (fd ==1 || !is_mapped_user_vaddr (buffer)) {
     sys_exit (-1);
   }
@@ -280,6 +282,7 @@ static int sys_read (int fd, void *buffer, unsigned size) {
 
 
 static int sys_write (int fd, const void *buffer, unsigned size) {
+  
   /*
   Writes size bytes from buffer to the open file fd. Returns the number of bytes
   actually written.

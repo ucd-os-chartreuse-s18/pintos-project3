@@ -17,7 +17,34 @@ struct page* create_spt_entry (void* upage, enum PAGE_STATUS loc, void* aux) {
    }
    
    struct hash *h = &thread_current ()->pages;
-   hash_insert (h, &p->elem);
+   struct hash_elem *e = hash_insert (h, &p->elem);
+   
+   printf ("added a page for %s %p\n", thread_current()->name, upage);
+   
+   struct hash_iterator it;
+   struct page *p2;
+   hash_first (&it, h);
+   printf ("HASH DUMP:\n");
+   int i = 0;
+   while (hash_next (&it)) {
+     p2 = hash_entry (hash_cur (&it), struct page, elem);
+     printf ("i: %d [%p]\n", i, p2->upage);
+     i++;
+   } printf ("\n");
+   
+   /*
+   if (e == NULL) {
+     printf ("inserted a new element\n");
+   } else printf ("inserted a repeated element\n");
+   */
+   
+   printf ("TRY LOOKUP:\n");
+   e = hash_lookup_key (h, (int) upage);
+   p2 = hash_entry (e, struct page, elem);
+   if (e == NULL) {
+     printf ("couldn't find %p\n", upage);
+   } else printf ("found %p\n", p2->upage);
+   printf ("\n");
    
    return NULL;
 }
@@ -31,6 +58,7 @@ bool page_in (void* upage) {
     struct hash_elem *e = hash_lookup_key (h, (int) upage);
     
     if (e == NULL) {
+      printf ("hash not found in %s\n", tc->name);
       return false;
     }
     
@@ -41,6 +69,7 @@ bool page_in (void* upage) {
     
     if (!success) {
         //TODO what other cleanup do we need?
+        printf ("pagedir set page failed\n");
         return false;
     }
     
@@ -51,6 +80,7 @@ bool page_in (void* upage) {
       if (file_read (fi->file, kpage, fi->file_bytes) != (int) fi->file_bytes)
       {
         palloc_free_page (kpage);
+        printf ("could not read\n");
         return false;
       }
       /*

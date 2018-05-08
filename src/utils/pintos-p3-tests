@@ -24,7 +24,7 @@ main ()
         let "pass = 0"
         let "total = 0"
         
-        test-args-none
+        #test-args-none
         #test-args-single
         #test-args-multiple
         #test-args-many
@@ -45,7 +45,7 @@ main ()
         #test-create-long
         #test-create-exists
         #test-create-bound
-
+        
         #test-open-normal
         #test-open-missing
         #test-open-boundary
@@ -53,7 +53,7 @@ main ()
         #test-open-null
         #test-open-bad-ptr
         #test-open-twice
-
+        
         #test-close-normal
         #test-close-twice
         #test-close-stdin
