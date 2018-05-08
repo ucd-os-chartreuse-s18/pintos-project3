@@ -20,11 +20,9 @@ struct hash_key {
  * (hash keys are castable to their raw value, and objects are
  * castable to their keys) */
 static inline unsigned
-hash_key_func (const void *a) {
-  int *key = (int*) a;
-  //*key is 0?
-  //printf ("\thashing %d and %p\n", *key, *key);
-  return hash_int (*key);
+hash_key_func (const struct hash_elem *e) {
+  struct hash_key *k = hash_entry (e, struct hash_key, elem);
+  return hash_int (k->key);
 }
 
 /* Standard less than function that operates on keys. */
@@ -32,7 +30,6 @@ static inline bool
 hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
   struct hash_key *t1 = hash_entry (a, struct hash_key, elem);
   struct hash_key *t2 = hash_entry (b, struct hash_key, elem);
-  //printf ("cmp %p %p\n", (void*) t1->key, (void*) t2->key);
   return t1->key < t2->key;
 }
 
