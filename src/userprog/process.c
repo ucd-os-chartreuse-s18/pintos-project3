@@ -52,7 +52,6 @@ process_execute (const char *file_name)
   
   /* Make a copy in a new page to avoid a race between the caller and load. */
   //ALLOCATION TYPE: Kernel (so we don't have to mess with it)
-  //But: We want to book-keep its location
   argv = palloc_get_page (0);
   if (argv == NULL)
     return TID_ERROR;
@@ -445,7 +444,7 @@ load (const char *cmdline, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp, cmdline))
     goto done;
-    
+  
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
   success = true;
@@ -537,7 +536,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
       size_t page_zero_bytes = PGSIZE - page_read_bytes;
       
-      //will malloc mess up frame bookeeping?
       struct file_info *f_info = malloc (sizeof (struct file_info));
       f_info->file = file;
       f_info->file_offset = ofs;
@@ -545,12 +543,12 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       f_info->private = !writable;
       
       //Put into supplemental page table
-      create_spt_entry(upage, IN_FILE, f_info);
+      create_spt_entry (upage, IN_FILE, f_info);
       
       /* Advance. */
       read_bytes -= page_read_bytes;
       zero_bytes -= page_zero_bytes;
-      ofs += page_read_bytes; //do we need this?
+      ofs += page_read_bytes;
       upage += PGSIZE;
   }
   return true;
@@ -588,8 +586,7 @@ setup_stack (void **esp_, const char *cmdline)
   //straightforward to write it this way.
   uint8_t* esp = *esp_;
   
-  //ALLOCATION TYPE: FRAME (This one is also going to be mapped immediately)
-  //Do we have to include it as a supplemental page entry? Yes
+  //allocate frame?
   kpage = palloc_get_page (PAL_USER | PAL_ZERO);
   if (kpage != NULL) {
       
@@ -672,7 +669,10 @@ install_page (void *upage, void *kpage, bool writable)
 {
   struct thread *t = thread_current ();
   
-  //Here, we should update our information in frame.c regarding mappings
+  //Here, we should update our information in frame.c regarding mappings.
+  //(that is, if we don't augment palloc)
+  //And we can add upage to the hash so that it can be swapped out later.
+  //The flag we will use is IN_FRAME for the supplemental page table entry
   
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */

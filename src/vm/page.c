@@ -27,6 +27,7 @@ struct page* create_spt_entry (void* upage, enum PAGE_STATUS loc, void* aux) {
 
 bool page_in (void* upage) {
     
+    //printf ("page in %p\n", upage);
     void* kpage = palloc_get_page (PAL_USER | PAL_ZERO);
     
     struct thread *tc = thread_current ();
@@ -53,29 +54,11 @@ bool page_in (void* upage) {
     case IN_FILE:
       
       file_seek (fi->file, fi->file_offset);
-      if (file_read (fi->file, kpage, fi->file_bytes) != (int) fi->file_bytes)
-      {
+      if (file_read (fi->file, kpage, fi->file_bytes) != (int) fi->file_bytes) {
         palloc_free_page (kpage);
         printf ("could not read\n");
         return false;
       }
-      /*
-      printf ("File dump:\n");
-      hex_dump ((uintptr_t) fi->file, fi->file, 64, true);
-      hex_dump ((uintptr_t) kpage, kpage, 64, true);
-      
-      printf ("kpage is %p, file is %p, bytes is %d\n",
-        kpage, fi->file, fi->file_bytes);
-      */
-      //printf ("Hex dump:\n");
-      /* a) Hex address to start counting from.
-       * b) Hex address to actually get data from.
-       * c) Number of bytes to write (should match the amount you wrote)
-       * d) Show ASCII
-       *                    a)       b)       c)           d)
-       *                    |        |        |            |
-       *                    v        v        v            v */
-      //hex_dump ((uintptr_t) kpage, kpage, fi->file_bytes, true);
       
       //None of this stuff should matter in the intial mapping
       //We access the frame on swap TODO update

@@ -14,8 +14,6 @@ struct hash_key {
   struct hash_elem elem;
 };
 
-#include <stdio.h>
-
 /* This function can hash both complete objects and hash_keys.
  * (hash keys are castable to their raw value, and objects are
  * castable to their keys) */
@@ -45,7 +43,7 @@ hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
 /* These functions just create a hash_key struct and use the
  * original hash functions, so check hash.h for documentation
  * on hash_find and hash_delete.
- *
+ * 
  * As far as I know, these functions are safer to use because
  * elem is completely blank and will never conflict with any
  * existing elements in the hash table. */

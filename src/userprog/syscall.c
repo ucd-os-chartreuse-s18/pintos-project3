@@ -20,6 +20,10 @@ static void syscall_handler (struct intr_frame *);
 
 static int sys_unimplemented(void);
 
+//Tried this, but it didn't work. Also tried "O0"
+//Perhaps doing it this way is still possible, but idk
+//#define OPTIMIZE_OUT __attribute__ ((optimize("-O3")))
+
 /* Projects 2 and later. */
 static void sys_halt (void);
 static int sys_exit (int status);
@@ -231,54 +235,71 @@ static int sys_open (const char *file) {
   struct hash *h = &t->open_files_hash;
   struct hash_key *hkey = (struct hash_key*) f;
   hash_insert (h, &hkey->elem); 
-
+  
   return hkey->key;
 }
 
 static int sys_filesize (int fd) {
+  
   struct thread *tc = thread_current ();
   struct hash *h = &tc->open_files_hash;
   struct hash_elem *e = NULL;
-
+  
   e = hash_lookup_key (h, fd);
-
+  
   int filesize = 0;
-
   if (e != NULL) {
     struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
     filesize = file_length ((struct file*) hkey);
   }
-
+  
   return filesize;
 }
 
+/* Basically validates a user address. Based completely off of
+ * the provided `get_user()` function. */
+static bool
+triggered_segfault (const uint8_t *uaddr) {
+  int result;
+  asm ("movl $1f, %0; movzbl %1, %0; 1:"
+  : "=&a" (result) : "m" (*uaddr));
+  return (result == -1);
+}
+
+//#pragma GCC optimize ("-O3")
 static int sys_read (int fd, void *buffer, unsigned size) {
   
-  if (fd ==1 || !is_mapped_user_vaddr (buffer)) {
+  /* This is a hack. memchr activates a page-in on the buffer,
+   * while the print and pos ensure that the memchr statement
+   * doesn't get optimized out. There is probably a better 
+   * way to handle the optimization, but anyways.. found a
+   * much better way to cause a segfault.
+  void* pos = memchr (buffer, 'x', 1);
+  printf ("%s", (pos == 0 ? "":"1"));
+  */
+  
+  if (triggered_segfault (buffer))
     sys_exit (-1);
-  }
-
-  int read = 0; // hold the number of bytes read from the file
-
+  if (fd == 1 || !is_mapped_user_vaddr (buffer))
+    sys_exit (-1);
+  
+  int read = 0;
+  //TODO: Evaluate whether this is needed
   if (fd == 0) {
-    read = input_getc (); //keyboard input, I am not sure we really need to worry about this
+    read = input_getc ();
   }
-
-  struct thread *tc = thread_current ();
-  struct hash *h = &tc->open_files_hash;
+  
+  struct hash *h = &thread_current()->open_files_hash;
   struct hash_elem *e = NULL;
-
+  
   e = hash_lookup_key (h, fd);
-
   if (e != NULL) {
     struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
     read = file_read ((struct file*) hkey, buffer, size);
   }
-
+  
   return read;
-
 }
-
 
 static int sys_write (int fd, const void *buffer, unsigned size) {
   
@@ -404,32 +425,3 @@ UNUSED static int sys_inumber (int fd UNUSED) {
   return EXIT_FAILURE;
 }
 
-#if false //Not sure where these need to go, so keep it here for now.
-/* Returns true if UADDR is a valid, mapped user address,
-  false otherwise. */
-static bool verify_user (const void *uaddr) {
- return (uaddr < PHYS_BASE
-         && pagedir_get_page (thread_current ()->pagedir, uaddr) != NULL);
-}
-
-/* Copies a byte from user address USRC to kernel address DST.
-  USRC must be below PHYS_BASE.
-  Returns true if successful, false if a segfault occurred. */
-static inline bool get_user (uint8_t *dst, const uint8_t *usrc) {
- int eax;
- asm ("movl $1f, %%eax; movb %2, %%al; movb %%al, %0; 1:"
-      : "=m" (*dst), "=&a" (eax) : "m" (*usrc));
- return eax != 0;
-}
-
-/* Writes BYTE to user address UDST.
-  UDST must be below PHYS_BASE.
-  Returns true if successful, false if a segfault occurred. */
-static inline bool put_user (uint8_t *udst, uint8_t byte) {
- int eax;
- asm ("movl $1f, %%eax; movb %b2, %0; 1:"
-      : "=m" (*udst), "=&a" (eax) : "q" (byte));
- return eax != 0;
-}
-
-#endif 
