@@ -9,4 +9,6 @@ If we run out of swap space, panic the kernel. When loading a page back into
 memory, we will need to free the memory that is used in the swap space.
 */
 
+void init_swap_block (void);
+
 #endif

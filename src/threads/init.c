@@ -42,6 +42,7 @@
 
 #ifdef VM
 #include "vm/frame.h"
+#include "vm/swap.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -129,6 +130,7 @@ main (void)
   
 #ifdef VM
   falloc_init ();
+  init_swap_block ();
 #endif
 
   /* Start thread scheduler and enable interrupts. */
