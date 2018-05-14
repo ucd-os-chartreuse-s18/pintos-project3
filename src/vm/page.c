@@ -87,7 +87,6 @@ bool grow_stack (void *faultaddr, void* stk_ptr) {
     
   for (int i = 1; i <= new_page_cnt; i++) {
     kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-    create_spt_entry (upage, IN_FRAME, NULL); 
     install_page (upage, kpage, true);
     upage += PGSIZE;
   }

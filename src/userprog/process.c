@@ -678,6 +678,7 @@ install_page (void *upage, void *kpage, bool writable)
   //(that is, if we don't augment palloc)
   //And we can add upage to the hash so that it can be swapped out later.
   //The flag we will use is IN_FRAME for the supplemental page table entry
+  create_spt_entry (upage, IN_FRAME, NULL); 
   
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
