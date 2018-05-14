@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <round.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/syscall.h"
@@ -143,7 +144,7 @@ page_fault (struct intr_frame *f)
   bool write;        /* True: access was write, false: access was read. */
   bool user;         /* True: access by user, false: access by kernel. */
   void *fault_addr;  /* Fault address. */
-  
+  bool good = false;
   /* Obtain faulting address, the virtual address that was
      accessed to cause the fault.  It may point to code or to
      data.  It is not necessarily the address of the instruction
@@ -152,28 +153,39 @@ page_fault (struct intr_frame *f)
      [IA32-v3a] 5.15 "Interrupt 14--Page Fault Exception
      (#PF)". */
   asm ("movl %%cr2, %0" : "=r" (fault_addr));
-  
+
+  /*Grab the current stack pointer*/
+  void *stack_ptr = f->esp;
   /* Turn interrupts back on (they were only off so that we could
    * be assured of reading CR2 before it changed). */
   intr_enable ();
     
   /* Count page faults. */
   page_fault_cnt++;
-  
+
   /* Determine cause. */
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
+
   
+
   if (!not_present) {
     fault(f, fault_addr, not_present, write, user);
   }
+
   if (fault_addr == NULL) {
     fault(f, fault_addr, not_present, write, user);
   }
   
-  void* upage = pg_round_down (fault_addr);
-  bool good = page_in (upage);
+  if (fault_addr >= stack_ptr - 32) {
+    //printf ("Page fault %p\n", fault_addr);
+    //printf ("Lets grow the stack!\n");
+    good = grow_stack (fault_addr, stack_ptr);
+  } else {
+    void* upage = pg_round_down (fault_addr);
+    good = page_in (upage);
+  }
   
   if (!good) {
     fault(f, fault_addr, not_present, write, user);
