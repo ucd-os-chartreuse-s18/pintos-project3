@@ -60,6 +60,8 @@ bool page_in (void* upage) {
         return false;
       }
       
+      file_seek (fi->file, fi->file_offset);
+      
       //None of this stuff should matter in the intial mapping
       //We access the frame on swap TODO update
       p->status = IN_FRAME;

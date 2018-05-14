@@ -301,35 +301,26 @@ static int sys_read (int fd, void *buffer, unsigned size) {
 }
 
 static int sys_write (int fd, const void *buffer, unsigned size) {
-  
-  /*
-  Writes size bytes from buffer to the open file fd. Returns the number of bytes
-  actually written.
-  Writing past end-of-file would normally extend the file, but file growth is not
-  implemented by the basic file system. The expected behavior is to write as many
-  bytes as possible up to end-of-file and return the actual number written.
-  */
-  
+    
   //Note: if size is larger than a few hundred bytes, break up into pieces.
   //It is suggested to use putbuf, but would printf work? Why not do that?
   if (fd == 1) {
-    putbuf (buffer, size); 
+    putbuf (buffer, size);
+    return 1;
   } else if (fd == 0) {
     return -1;
   } else if (!is_mapped_user_vaddr (buffer)) {
     sys_exit (-1);
   }
   
+  int written = 0;
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
-  int written = 0;
-  struct hash_elem *e = NULL;
-
-  e = hash_lookup_key (h, fd);
-
+  struct hash_elem *e = hash_lookup_key (h, fd);
+  
   if (e != NULL) {
-    struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
-    written = file_write ((struct file*) hkey, buffer, size);     
+    struct file *file = keyed_hash_entry (e, struct file);
+    written = file_write (file, buffer, size);
   }
   
   return written;
@@ -420,7 +411,7 @@ static int sys_mmap (int fd, void *upage) {
   if (file_length (file) == 0) return -1;
   if (file_mapped (file)) return -1;
   file_map (file, upage);
-
+  
   off_t ofs = 0;
   uint32_t read_bytes = file_length (file);
   uint32_t zero_bytes = ROUND_UP (read_bytes, PGSIZE) - read_bytes;
@@ -452,16 +443,12 @@ static int sys_mmap (int fd, void *upage) {
 
 void sys_munmap (mapid_t mapid) {
   
-  //printf ("UNMAP\n");
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
   struct hash_elem *e = hash_lookup_key (h, mapid);
-  if (e == NULL) {
-    //printf ("ALPHA\n");
-    sys_exit (-1);
-  }
-  struct file *file = keyed_hash_entry (e, struct file);
+  if (e == NULL) sys_exit (-1);
   
+  struct file *file = keyed_hash_entry (e, struct file);
   int page_count = file_pagec (file);
   uint32_t** pages = file_pagev (file);
   
@@ -485,10 +472,11 @@ void sys_munmap (mapid_t mapid) {
   
   file_unmap (file);
   if (mmap_close (file)) {
-    //printf ("REMOVING FROM HASH\n");
     file_close (file);
     HASH_KEY_DELETE (h, mapid);
   } else {
+    //Not sure if this is hacky. Needed for mmap-write,
+    //and doesn't affect any other test.
     file_seek (file, 0);
   }
   free (pages);

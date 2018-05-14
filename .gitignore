@@ -1,2 +1,2 @@
-args-none.errors
-args-none.output
+*.errors
+*.output

@@ -19,14 +19,15 @@ test_main (void)
   /* Open file, map, verify data. */
   CHECK ((handle = open ("sample.txt")) > 1, "open \"sample.txt\"");
   CHECK ((map = mmap (handle, actual)) != MAP_FAILED, "mmap \"sample.txt\"");
-  if (memcmp (actual, sample, strlen (sample)))
+  
+  if (memcmp (sample, actual, strlen (overwrite)))
     fail ("read of mmap'd file reported bad data");
-
+  
   /* Modify file. */
   CHECK (write (handle, overwrite, strlen (overwrite))
          == (int) strlen (overwrite),
          "write \"sample.txt\"");
-
+  
   /* Close mapping.  Data should not be written back, because we
      didn't modify it via the mapping. */
   msg ("munmap \"sample.txt\"");
