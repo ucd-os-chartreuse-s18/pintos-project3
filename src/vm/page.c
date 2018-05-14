@@ -78,3 +78,19 @@ bool page_in (void* upage) {
     return true;
 }
 
+bool grow_stack (void *faddr, void* stk_ptr) {
+
+  int page_distance = ROUND_UP(((int) stk_ptr - (int) faddr), PGSIZE);
+  int new_page_cnt = page_distance / PGSIZE;
+  uint8_t *kpage;
+  uint8_t *upage;
+  void *faultaddr = faddr;
+  for (int i = 1; i <= new_page_cnt; i++) {
+    kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+    upage = create_spt_entry (ROUND_DOWN((int) faultaddr * i, PGSIZE), IN_FRAME, NULL); 
+    install_page(upage, kpage, true);
+  }
+
+  return true;
+}
+

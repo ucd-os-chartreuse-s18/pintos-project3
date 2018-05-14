@@ -12,7 +12,7 @@
 #include "../devices/block.h"
 #include "../filesys/off_t.h"
 #include "../filesys/file.h"
-
+#include <round.h>
 /* These should be mutually-exclusive. Don't think powers of two will do much,
  * but it might be interesting/helpful to describe a file that is currently
  * being written to/from a certain location? */
