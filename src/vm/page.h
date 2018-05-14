@@ -5,14 +5,16 @@
 #include <keyed_hash.h>
 #include <stdio.h>
 #include <string.h>
-#include "../threads/palloc.h"
-#include "../threads/vaddr.h"
-#include "../threads/thread.h"
-#include "../threads/malloc.h"
-#include "../devices/block.h"
-#include "../filesys/off_t.h"
-#include "../filesys/file.h"
 #include <round.h>
+#include "threads/palloc.h"
+#include "threads/vaddr.h"
+#include "threads/thread.h"
+#include "threads/malloc.h"
+#include "userprog/process.h"
+#include "devices/block.h"
+#include "filesys/off_t.h"
+#include "filesys/file.h"
+
 /* These should be mutually-exclusive. Don't think powers of two will do much,
  * but it might be interesting/helpful to describe a file that is currently
  * being written to/from a certain location? */
@@ -65,5 +67,7 @@ struct page {
 struct page* create_spt_entry (void*, enum PAGE_STATUS, void*);
 
 bool page_in (void* upage);
+
+bool grow_stack (void*, void*);
 
 #endif

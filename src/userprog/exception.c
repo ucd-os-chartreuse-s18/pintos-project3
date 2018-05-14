@@ -2,6 +2,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <round.h>
 #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
 #include "userprog/syscall.h"
@@ -10,7 +11,6 @@
 #include "threads/vaddr.h"
 #include "threads/palloc.h"
 #include "threads/pte.h"
-#include <round.h>
 #include "vm/page.h"
 
 /* Number of page faults processed. */
@@ -179,12 +179,12 @@ page_fault (struct intr_frame *f)
   }
   
   if (fault_addr >= stack_ptr - 32) {
-    good = grow_stack(fault_addr, stack_ptr);
-  }
-
-  else {
-  void* upage = pg_round_down (fault_addr);
-  good = page_in (upage);
+    //printf ("Page fault %p\n", fault_addr);
+    //printf ("Lets grow the stack!\n");
+    good = grow_stack (fault_addr, stack_ptr);
+  } else {
+    void* upage = pg_round_down (fault_addr);
+    good = page_in (upage);
   }
   
   if (!good) {
