@@ -38,6 +38,10 @@ hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
   (hash_less_func*) hash_key_less,  \
   NULL)
 
+#define keyed_hash_entry(e, T) \
+  (T*) hash_entry (e, struct hash_key, elem)
+
+
 /* Wrapper Functions */
 
 /* These functions just create a hash_key struct and use the
@@ -47,9 +51,8 @@ hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
  * As far as I know, these functions are safer to use because
  * elem is completely blank and will never conflict with any
  * existing elements in the hash table. */
-
 static inline struct hash_elem*
-hash_lookup_key(struct hash *h, int k) {
+hash_lookup_key (struct hash *h, int k) {
   struct hash_key key = { k, {} };
   return hash_find (h, &key.elem);
 }
@@ -59,5 +62,21 @@ hash_delete_key (struct hash *h, int k) {
   struct hash_key key = { k, {} };
   return hash_delete (h, &key.elem);
 }
+
+/* I originally made the lookup and delete functions as inline
+ * functions so that the key wouldn't exist in the scope of the
+ * calling function. Now below, I am using macros so that the
+ * user won't get a warning if they don't cast the key to an int. */
+#define HASH_LOOKUP_KEY(h, k) \
+  hash_lookup_key (h, (int) k)
+  
+#define HASH_KEY_DELETE(h, k) \
+  hash_delete_key (h, (int) k)
+
+/* A simple mapping between a key and data. */
+struct mapping {
+  struct hash_key key;
+  void* data;
+};
 
 #endif

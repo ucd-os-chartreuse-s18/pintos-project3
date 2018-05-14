@@ -4,6 +4,7 @@
 #include <../lib/user/syscall.h>
 
 void syscall_init (void);
+void sys_munmap (mapid_t mapid);
 
 typedef int syscall_func(int, int, int);
 

@@ -9,6 +9,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
 #include "userprog/stack.h"
+#include "userprog/syscall.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -115,6 +116,7 @@ start_process (void *pargs_)
   keyed_hash_init (&tc->children_hash);
   keyed_hash_init (&tc->open_files_hash);
   keyed_hash_init (&tc->pages);
+  keyed_hash_init (&tc->mappings);
   hash_insert (&p->children_hash, &tc->hash_elem);
   
   /* Initialize interrupt frame and load executable. */
@@ -176,7 +178,7 @@ process_wait (tid_t child_tid)
    * interrupted and was about to delete the key, but then
    * the new thread finds the element isn't deleted yet
    * when in fact it should.
-   *
+   * 
    * This may not be a problem, but maybe I could initialize
    * a static semaphore for this method? IDK, that might be
    * interesting. */
@@ -187,9 +189,22 @@ process_wait (tid_t child_tid)
   
 }
 
+static void munmap_on_exit (void) {
+  
+  struct hash_iterator i;
+  struct hash_key *fd;
+  
+  hash_first (&i, &thread_current()->open_files_hash);
+  while (hash_next (&i)) {
+      fd = keyed_hash_entry (hash_cur (&i), struct hash_key);
+      if (file_mapped ((struct file*) fd))
+        sys_munmap (fd->key);
+  }
+}
+
 static void file_destructor (struct hash_elem *e, void* aux UNUSED) {
-  struct hash_key *k = hash_entry (e, struct hash_key, elem);
-  file_close ((struct file*) k);
+  struct file *f = keyed_hash_entry (e, struct file);
+  file_close (f);
 }
 
 /* Free the current process's resources. */
@@ -201,17 +216,12 @@ process_exit (int exit_status)
   
   file_close (t->executable);
   
-  //Close all files
+  //Unmap and close all files
+  munmap_on_exit ();
   hash_destroy (&t->open_files_hash, file_destructor);
   
-  /* This was moved from sys_exit. Now we can see the printed status
-   * upon exiting without needing to call the system call. This was
-   * useful because the test-bad-* tests want to see the exit status
-   * after a page fault occurs in exception.c. Now that we have the
-   * status here as a variable, I wonder if there is a better way to
-   * share the exit status with exec. */
   printf ("%s: exit(%d)\n", t->name, exit_status);
-  thread_current ()->exit_status = exit_status;
+  t->exit_status = exit_status;
   
   //Release process_wait
   sema_up (&t->dying_sema);
@@ -680,8 +690,8 @@ install_page (void *upage, void *kpage, bool writable)
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
-int
-allocate_fd (void)
+/* Used for file descriptors and memory mappings. */
+int allocate_id (void)
 {
-  return thread_current()->next_fd++;
+  return thread_current()->next_id++;
 }

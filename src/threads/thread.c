@@ -125,6 +125,7 @@ void thread_hash_init (void)
   keyed_hash_init (&thread_current ()->open_files_hash);
   keyed_hash_init (&thread_current ()->children_hash);
   keyed_hash_init (&thread_current ()->pages);
+  keyed_hash_init (&thread_current ()->mappings);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
@@ -478,7 +479,7 @@ init_thread (struct thread *t, const char *name, int priority)
   
   sema_init (&t->dying_sema, 0);
   sema_init (&t->status_sema, 0);
-  t->next_fd = 2;
+  t->next_id = 2;
   
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);

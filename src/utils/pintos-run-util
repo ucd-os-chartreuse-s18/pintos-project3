@@ -72,7 +72,7 @@ make_ () {
     return 0
   fi
   
-  cd ~/pintos/src/userprog
+  cd ~/pintos/src/vm
   case $1 in
     pintos ) make       ;;
     disk   ) make_dsk   ;;
@@ -287,15 +287,21 @@ run_ () {
     #args working by using Make.tests, fixing this should be
     #relatively easy as well.
     
+    #Note: userprog and vm have different "sample.txt" files
+    #      -p ../../tests/vm/sample.txt -a sample.txt          \
+    #And for mmap-write, it prevents a file called "sample.txt"
+    #from being created.
+    
     echo -e "\nBooting pintos for test: $PROG_NAME"
     pintos -v $GDB --filesys-size=2                       \
       -p $FILE -a $PROG_NAME                              \
-      -p ../../tests/userprog/sample.txt -a sample.txt    \
+      -p ../../tests/vm/sample.txt -a sample.txt          \
       -p tests/userprog/child-simple -a child-simple      \
       -p tests/userprog/child-args -a child-args          \
       -p tests/userprog/child-close -a child-close        \
       -p tests/userprog/child-bad -a child-bad            \
       -p tests/userprog/child-rox -a child-rox            \
+      -p tests/vm/child-mm-wrt -a child-mm-wrt            \
       -- -q -f run "$PROG_NAME $TEST_ARGS"                \
       < /dev/null 2> $FILE.errors | tee $FILE.output
     echo -e "Result:"

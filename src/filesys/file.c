@@ -2,21 +2,24 @@
 #include "filesys/file.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
+#include "threads/vaddr.h"
 #include "userprog/process.h"
 #include <keyed_hash.h>
-#include <hash.h>
-#include "threads/synch.h"
+#include <round.h>
 
 /* An open file. */
 struct file 
-  {
+{
     int fd;
     struct hash_elem h_elem;
     struct inode *inode;        /* File's inode. */
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
+    void* base;                 /* First upage, end is base + file_length */
+    bool map_close;             /* Flag for mmaping */
     struct lock file_lock;
-  };
+};
 
 /* Opens a file for the given INODE, of which it takes ownership,
    and returns the new file.  Returns a null pointer if an
@@ -30,7 +33,9 @@ file_open (struct inode *inode)
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
-      file->fd = allocate_fd ();
+      file->map_close = false;
+      file->base = NULL;
+      file->fd = allocate_id ();
       lock_init (&file->file_lock);
       return file;
     }
@@ -50,18 +55,28 @@ file_reopen (struct file *file)
   return file_open (inode_reopen (file->inode));
 }
 
-/* Closes FILE. */
-void
+/* Closes FILE. If this function returns false the file is
+ * mapped to memory. While the file is still memory-mapped
+ * it will remain open. */
+bool
 file_close (struct file *file) 
 {
-  if (file != NULL)
-    {
+  if (file != NULL) {
+      
+      //Close later on memory unmap
+      if (file_mapped (file)) {
+        file->map_close = true;
+        return false;
+      }
+      
       lock_acquire (&file->file_lock);
       file_allow_write (file);
       inode_close (file->inode);
       lock_release (&file->file_lock);
       free (file);
-    }
+      return true;
+  }
+  return false;
 }
 
 /* Returns the inode encapsulated by FILE. */
@@ -94,7 +109,10 @@ file_read (struct file *file, void *buffer, off_t size)
 off_t
 file_read_at (struct file *file, void *buffer, off_t size, off_t file_ofs) 
 {
-  return inode_read_at (file->inode, buffer, size, file_ofs);
+  lock_acquire (&file->file_lock);
+  off_t ret = inode_read_at (file->inode, buffer, size, file_ofs);
+  lock_release (&file->file_lock);
+  return ret;
 }
 
 /* Writes SIZE bytes from BUFFER into FILE,
@@ -180,4 +198,41 @@ file_tell (struct file *file)
 {
   ASSERT (file != NULL);
   return file->pos;
+}
+
+bool file_mapped (struct file *file) {
+  ASSERT (file != NULL);
+  return file->base;
+}
+
+void file_map (struct file *file, void *base) {
+  ASSERT (file->base == NULL);
+  file->base = base;
+}
+
+void file_unmap (struct file *file) {
+  ASSERT (file->base != NULL);
+  file->base = NULL;
+}
+
+int file_pagec (struct file *file) {
+  ASSERT (file_mapped (file));
+  return ROUND_UP (file_length (file), PGSIZE) / PGSIZE;
+}
+
+void* file_pagev (struct file *file) {
+  
+  int argc = file_pagec (file);
+  uint32_t* *argv = malloc (sizeof (uint32_t*) * argc);
+  
+  void *upage = file->base;
+  for (int i = 0; i < argc; i++) {
+    argv[i] = upage;
+    upage += PGSIZE;
+  }
+  return argv;
+}
+
+bool mmap_close (struct file *file) {
+  return file->map_close;
 }

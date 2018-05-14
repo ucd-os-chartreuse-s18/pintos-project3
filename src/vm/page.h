@@ -17,9 +17,10 @@
  * but it might be interesting/helpful to describe a file that is currently
  * being written to/from a certain location? */
 enum PAGE_STATUS {
-    IN_FRAME = 001,
-    IN_FILE  = 002,
-    IN_SWAP  = 004
+    IN_FRAME = 1,
+    IN_FILE  = 2,
+    IN_SWAP  = 4,
+    MMAP     = 8
 };
 
 struct file_info {

@@ -35,7 +35,7 @@ bool page_in (void* upage) {
     struct hash_elem *e = hash_lookup_key (h, (int) upage);
     
     if (e == NULL) {
-      printf ("hash not found in %s\n", tc->name);
+      //printf ("hash not found in %s\n", tc->name);
       return false;
     }
     

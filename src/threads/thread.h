@@ -110,18 +110,13 @@ struct thread
     
     struct file *executable;
     
-    /* File descriptor ids will be specific per process. The only fds that
-     * aren't specific to a process are stdin and stdout. By having `fd_counter`
-     * as a member of thread.h, we won't have to worry about synchronization
-     * between different processes. */
-    int next_fd;
+    /* A per-process auto increment counter for file descriptors and
+     * memory mappings. */
+    int next_id;
     
     struct hash open_files_hash;
-    
-    /* These are the new variables that are introduced in Ivo's manual */
     struct hash pages;
-    //struct list mappings; //memory-mapped files
-    //int next_handle
+    struct hash mappings;
     
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <syscall-nr.h>
+#include <keyed_hash.h>
+#include <round.h>
 #include "userprog/syscall.h"
 #include "userprog/stack.h"
 #include "userprog/pagedir.h"
@@ -11,18 +13,15 @@
 #include "threads/vaddr.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
-#include <keyed_hash.h>
-#include <hash.h>
+#include "vm/page.h"
 
+
+static bool triggered_segfault (const uint8_t *uaddr);
 static void syscall_handler (struct intr_frame *);
 
 /* SYSTEM CALL PROTOTYPES */
 
 static int sys_unimplemented(void);
-
-//Tried this, but it didn't work. Also tried "O0"
-//Perhaps doing it this way is still possible, but idk
-//#define OPTIMIZE_OUT __attribute__ ((optimize("-O3")))
 
 /* Projects 2 and later. */
 static void sys_halt (void);
@@ -41,7 +40,7 @@ static void sys_close (int fd);
 
 /* Project 3 and optionally project 4. */
 static int sys_mmap (int fd, void *addr);
-static int sys_munmap (mapid_t mapid);
+//unmap is not static, see syscall.h
 
 /* Project 4 only. */
 static int sys_chdir (const char *dir);
@@ -92,10 +91,12 @@ syscall_argc (int sys_number) {
     case SYS_FILESIZE:
     case SYS_TELL:
     case SYS_CLOSE:
+    case SYS_MUNMAP:
       return 1;
     
     case SYS_CREATE:
     case SYS_SEEK:
+    case SYS_MMAP:
       return 2;
     
     case SYS_READ:
@@ -114,7 +115,7 @@ static void
 syscall_handler (struct intr_frame *f) 
 {
   uint8_t *esp = f->esp;
-    
+  
   /* The test `sc-bad-sp` is very explicit that the stack shouldn't be below
    * the instruction pointer. However, to be safe I'm making sure that esp
    * is not in the entire page. There is no lower bound for the page because
@@ -134,22 +135,27 @@ syscall_handler (struct intr_frame *f)
   //Function pointer
   int (*sys_func)(int, int, int);
   
+  /* Syscall numbers are defined in syscall-nr.h */
+  #define assign sys_func = (syscall_func*)
   switch (sys_number) {
-    case SYS_HALT:     sys_func = (syscall_func*) sys_halt; break;
-    case SYS_EXIT:     sys_func = (syscall_func*) sys_exit; break;
-    case SYS_EXEC:     sys_func = (syscall_func*) sys_exec; break;
-    case SYS_WAIT:     sys_func = (syscall_func*) sys_wait; break;
-    case SYS_CREATE:   sys_func = (syscall_func*) sys_create; break;
-    case SYS_REMOVE:   sys_func = (syscall_func*) sys_remove; break;
-    case SYS_OPEN:     sys_func = (syscall_func*) sys_open; break;
-    case SYS_FILESIZE: sys_func = (syscall_func*) sys_filesize; break;
-    case SYS_READ:     sys_func = (syscall_func*) sys_read; break;
-    case SYS_WRITE:    sys_func = (syscall_func*) sys_write; break;
-    case SYS_SEEK:     sys_func = (syscall_func*) sys_seek; break;
-    case SYS_TELL:     sys_func = (syscall_func*) sys_tell; break;
-    case SYS_CLOSE:    sys_func = (syscall_func*) sys_close; break;
-    default:           sys_func = (syscall_func*) sys_unimplemented;
+    case SYS_HALT:     assign sys_halt; break;
+    case SYS_EXIT:     assign sys_exit; break;
+    case SYS_EXEC:     assign sys_exec; break;
+    case SYS_WAIT:     assign sys_wait; break;
+    case SYS_CREATE:   assign sys_create; break;
+    case SYS_REMOVE:   assign sys_remove; break;
+    case SYS_OPEN:     assign sys_open; break;
+    case SYS_FILESIZE: assign sys_filesize; break;
+    case SYS_READ:     assign sys_read; break;
+    case SYS_WRITE:    assign sys_write; break;
+    case SYS_SEEK:     assign sys_seek; break;
+    case SYS_TELL:     assign sys_tell; break;
+    case SYS_CLOSE:    assign sys_close; break;
+    case SYS_MMAP:     assign sys_mmap; break;
+    case SYS_MUNMAP:   assign sys_munmap; break;
+    default:           assign sys_unimplemented;
   }
+  #undef assign
   
   int args[] = {0, 0, 0};
   for (int i = 0; i < argc; ++i) {
@@ -158,6 +164,7 @@ syscall_handler (struct intr_frame *f)
     POP (args[i]);
   }
   
+  //printf ("args are [%d, %d, %d]\n", args[0], args[1], args[2]);
   f->eax = sys_func(args[0], args[1], args[2]);
   
   //Note: I see now Ivo suggested to use something like `struct syscall`, and
@@ -167,15 +174,6 @@ syscall_handler (struct intr_frame *f)
   //be referenced as an alternate design in the design doc if needed.
   
 }
-
-/* Added for the mmap syscall. This was created following Ivo's manual. */
-struct mapping {
-    struct list_elem elem;    /* List element. */
-    int handle;               /* Mapping id. */
-    struct file *file;        /* File. */
-    uint8_t *base;            /* Start of memory mapping. */
-    size_t page_cnt;          /* Number of pages mapped. */
-};
 
 static int sys_unimplemented (void) {
   printf ("Warning: A syscall was called that hasn't been implemented yet.\n");
@@ -228,8 +226,10 @@ static int sys_open (const char *file) {
     sys_exit (-1);
   
   struct file *f = filesys_open (file);
-  if (f == NULL)
+  if (f == NULL) {
+    //printf ("\tfile not found\n");
     return -1;
+  }
   
   struct thread *t = thread_current ();
   struct hash *h = &t->open_files_hash;
@@ -244,7 +244,6 @@ static int sys_filesize (int fd) {
   struct thread *tc = thread_current ();
   struct hash *h = &tc->open_files_hash;
   struct hash_elem *e = NULL;
-  
   e = hash_lookup_key (h, fd);
   
   int filesize = 0;
@@ -256,17 +255,17 @@ static int sys_filesize (int fd) {
   return filesize;
 }
 
-/* Basically validates a user address. Based completely off of
- * the provided `get_user()` function. */
+/* Basically validates a user address. Returns true if a seg fault
+ * occured. This is based completely off of the provided `get_user()`
+ * function. */
 static bool
 triggered_segfault (const uint8_t *uaddr) {
   int result;
   asm ("movl $1f, %0; movzbl %1, %0; 1:"
-  : "=&a" (result) : "m" (*uaddr));
+    : "=&a" (result) : "m" (*uaddr));
   return (result == -1);
 }
 
-//#pragma GCC optimize ("-O3")
 static int sys_read (int fd, void *buffer, unsigned size) {
   
   /* This is a hack. memchr activates a page-in on the buffer,
@@ -284,7 +283,6 @@ static int sys_read (int fd, void *buffer, unsigned size) {
     sys_exit (-1);
   
   int read = 0;
-  //TODO: Evaluate whether this is needed
   if (fd == 0) {
     read = input_getc ();
   }
@@ -294,8 +292,9 @@ static int sys_read (int fd, void *buffer, unsigned size) {
   
   e = hash_lookup_key (h, fd);
   if (e != NULL) {
-    struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
-    read = file_read ((struct file*) hkey, buffer, size);
+    struct file *file = keyed_hash_entry (e, struct file);
+    //read = file_read_at (file, buffer, size, 0);
+    read = file_read (file, buffer, size);
   }
   
   return read;
@@ -315,16 +314,12 @@ static int sys_write (int fd, const void *buffer, unsigned size) {
   //It is suggested to use putbuf, but would printf work? Why not do that?
   if (fd == 1) {
     putbuf (buffer, size); 
-  }
-
-  else if (fd == 0) {
+  } else if (fd == 0) {
     return -1;
-  }
-
-  else if (!is_mapped_user_vaddr (buffer)) {
+  } else if (!is_mapped_user_vaddr (buffer)) {
     sys_exit (-1);
   }
-
+  
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
   int written = 0;
@@ -345,7 +340,6 @@ static void sys_seek (int fd, unsigned position) {
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
   struct hash_elem *e = NULL;
-
   e = hash_lookup_key (h, fd);
 
   if (e != NULL) {
@@ -357,13 +351,12 @@ static void sys_seek (int fd, unsigned position) {
 static int sys_tell (int fd) {
 
   int position = 0; //position of the next byte to be read
-
+  
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
   struct hash_elem *e = NULL;
-
   e = hash_lookup_key (h, fd);
-
+  
   if (e != NULL) {
     struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
     position = file_tell ((struct file*) hkey);
@@ -383,25 +376,123 @@ static void sys_close (int fd) {
   
   struct thread *tc = thread_current();
   struct hash *h = &tc->open_files_hash;
-  struct hash_elem *e = NULL;
-  e = hash_lookup_key (h, fd);
+  struct hash_elem *e = hash_lookup_key (h, fd);
+  if (e == NULL) sys_exit (-1);
   
-  if (e != NULL) {
-    struct hash_key *hkey = hash_entry (e, struct hash_key, elem);
-    e = hash_delete_key (h, fd); 
-    file_close ((struct file*) hkey); 
+  /* If we are done with the file for good (not mmaped), then
+   * delete it from the hash as well. */
+  struct file *file = keyed_hash_entry (e, struct file);
+  //printf ("file is %p\n", file);
+  //if (file_close (file))
+  
+  /* Was expecting to use a newly defined status from file_close
+   * instead of using this file_mapped function here, but there
+   * is a problem with that. 1) hash_key_delete is dependant on
+   * whether or not the file is mapped, and 2) closing the file
+   * before deleting the hash messes with the data. */
+  if (!file_mapped (file)) {
+    hash_delete_key (h, fd);
+    file_close (file);
   }
-  else
+}
+
+static int sys_mmap (int fd, void *upage) {
+  
+  if (fd == 0 || fd == 1)
     sys_exit (-1);
+    
+  if (upage == NULL)
+    return -1;
+  
+  struct hash *h = &thread_current()->pages;
+  struct hash_elem *e = HASH_LOOKUP_KEY (h, upage);
+  if (e != NULL) return -1;
+  
+  //This does not seem to affect the tests at all
+  //if (!is_mapped_user_vaddr (addr))
+  //  sys_exit (-1);
+  
+  h = &thread_current()->open_files_hash;
+  e = hash_lookup_key (h, fd);
+  if (e == NULL) sys_exit(-1);
+  
+  struct file *file = keyed_hash_entry (e, struct file);
+  if (file_length (file) == 0) return -1;
+  if (file_mapped (file)) return -1;
+  file_map (file, upage);
+
+  off_t ofs = 0;
+  uint32_t read_bytes = file_length (file);
+  uint32_t zero_bytes = ROUND_UP (read_bytes, PGSIZE) - read_bytes;
+  
+  //Based on "load segment"
+  while (read_bytes > 0 || zero_bytes > 0) {
+      
+      size_t page_read_bytes = read_bytes < PGSIZE ? read_bytes : PGSIZE;
+      size_t page_zero_bytes = PGSIZE - page_read_bytes;
+      
+      //Note: All mmapping are public
+      struct file_info *f_info = malloc (sizeof (struct file_info));
+      f_info->file = file;
+      f_info->file_offset = ofs;
+      f_info->file_bytes = page_read_bytes;
+      f_info->private = false;
+      
+      //Put into supplemental page table
+      create_spt_entry (upage, IN_FILE, f_info);
+      
+      /* Advance. */
+      read_bytes -= page_read_bytes;
+      zero_bytes -= page_zero_bytes;
+      ofs += page_read_bytes;
+      upage += PGSIZE;
+  }
+  return fd;
 }
 
-/* Project 3 and optionally project 4. */
-UNUSED static int sys_mmap (int fd UNUSED, void *addr UNUSED) {
-  return EXIT_FAILURE;
-}
-
-UNUSED static int sys_munmap (mapid_t mapid UNUSED) {
-  return EXIT_FAILURE;
+void sys_munmap (mapid_t mapid) {
+  
+  //printf ("UNMAP\n");
+  struct thread *tc = thread_current();
+  struct hash *h = &tc->open_files_hash;
+  struct hash_elem *e = hash_lookup_key (h, mapid);
+  if (e == NULL) {
+    //printf ("ALPHA\n");
+    sys_exit (-1);
+  }
+  struct file *file = keyed_hash_entry (e, struct file);
+  
+  int page_count = file_pagec (file);
+  uint32_t** pages = file_pagev (file);
+  
+  struct page *p;
+  struct file_info *fi;
+  for (int i = 0; i < page_count; i++) {
+    
+    e = HASH_LOOKUP_KEY (&tc->pages, pages[i]);
+    p = keyed_hash_entry (e, struct page);
+    
+    //Lazy write back (idk how dirty gets set btw)
+    if (pagedir_is_dirty (tc->pagedir, pages[i])) {
+      fi = p->file_info;
+      file_seek (file, fi->file_offset);
+      file_write (file, pages[i], fi->file_bytes);
+    }
+    
+    HASH_KEY_DELETE (&tc->pages, pages[i]);
+    free (p);
+  }
+  
+  file_unmap (file);
+  if (mmap_close (file)) {
+    //printf ("REMOVING FROM HASH\n");
+    file_close (file);
+    HASH_KEY_DELETE (h, mapid);
+  } else {
+    file_seek (file, 0);
+  }
+  free (pages);
+  
 }
 
 /* Project 4 only. */
