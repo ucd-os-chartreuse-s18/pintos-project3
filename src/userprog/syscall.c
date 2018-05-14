@@ -373,8 +373,6 @@ static void sys_close (int fd) {
   /* If we are done with the file for good (not mmaped), then
    * delete it from the hash as well. */
   struct file *file = keyed_hash_entry (e, struct file);
-  //printf ("file is %p\n", file);
-  //if (file_close (file))
   
   /* Was expecting to use a newly defined status from file_close
    * instead of using this file_mapped function here, but there
@@ -391,8 +389,11 @@ static int sys_mmap (int fd, void *upage) {
   
   if (fd == 0 || fd == 1)
     sys_exit (-1);
-    
+  
   if (upage == NULL)
+    return -1;
+  
+  if (upage != pg_round_down (upage))
     return -1;
   
   struct hash *h = &thread_current()->pages;
