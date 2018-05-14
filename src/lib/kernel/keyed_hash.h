@@ -41,7 +41,6 @@ hash_key_less (const struct hash_elem *a, const struct hash_elem *b) {
 #define keyed_hash_entry(e, T) \
   (T*) hash_entry (e, struct hash_key, elem)
 
-
 /* Wrapper Functions */
 
 /* These functions just create a hash_key struct and use the
@@ -72,11 +71,5 @@ hash_delete_key (struct hash *h, int k) {
   
 #define HASH_KEY_DELETE(h, k) \
   hash_delete_key (h, (int) k)
-
-/* A simple mapping between a key and data. */
-struct mapping {
-  struct hash_key key;
-  void* data;
-};
 
 #endif

@@ -8,6 +8,8 @@
 #include "tests/lib.h"
 #include "tests/filesys/base/syn-write.h"
 
+const char *test_name = "child-syn-wrt";
+
 char buf[BUF_SIZE];
 
 int

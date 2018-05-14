@@ -110,13 +110,11 @@ struct thread
     
     struct file *executable;
     
-    /* A per-process auto increment counter for file descriptors and
-     * memory mappings. */
+    /* A per-process auto increment counter for file descriptors */
     int next_id;
     
     struct hash open_files_hash;
     struct hash pages;
-    struct hash mappings;
     
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

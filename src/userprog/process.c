@@ -116,7 +116,6 @@ start_process (void *pargs_)
   keyed_hash_init (&tc->children_hash);
   keyed_hash_init (&tc->open_files_hash);
   keyed_hash_init (&tc->pages);
-  keyed_hash_init (&tc->mappings);
   hash_insert (&p->children_hash, &tc->hash_elem);
   
   /* Initialize interrupt frame and load executable. */
@@ -690,7 +689,7 @@ install_page (void *upage, void *kpage, bool writable)
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
 }
 
-/* Used for file descriptors and memory mappings. */
+/* Used for file descriptors. */
 int allocate_id (void)
 {
   return thread_current()->next_id++;

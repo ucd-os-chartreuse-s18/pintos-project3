@@ -8,7 +8,7 @@
 
 main () 
 {
-    echo -e "PINTOS-P3: USERPROG -- ITEMIZED PASS/FAIL TESTING SCRIPT\n"
+    echo -e "PINTOS-P3: USERPROG -- ITEMIZED TESTING SCRIPT\n"
     echo -e "NOTE: This script must be run from your Pintos 'src/userprog/' directory.\n"
     echo -e "This script will build Pintos, and if successful, will use QEMU"
     echo -e "to execute the tests that are not commented out in this script.\n"
@@ -29,15 +29,12 @@ main ()
         #test-args-multiple
         #test-args-many
         #test-args-dbl-space
-
         #test-sc-bad-sp
         #test-sc-bad-arg
         #test-sc-boundary
         #test-sc-boundary-2
-
         #test-halt
         #test-exit
-
         #test-create-normal
         #test-create-empty
         #test-create-null
@@ -45,7 +42,6 @@ main ()
         #test-create-long
         #test-create-exists
         #test-create-bound
-        
         #test-open-normal
         #test-open-missing
         #test-open-boundary
@@ -53,68 +49,57 @@ main ()
         #test-open-null
         #test-open-bad-ptr
         #test-open-twice
-        
         #test-close-normal
         #test-close-twice
         #test-close-stdin
         #test-close-stdout
         #test-close-bad-fd
-
         #test-read-normal
         #test-read-bad-ptr
         #test-read-boundary
         #test-read-zero
         #test-read-stdout
         #test-read-bad-fd
-
         #test-write-normal
         #test-write-bad-ptr
         #test-write-boundary
         #test-write-zero
         #test-write-stdin
         #test-write-bad-fd
-
         #test-exec-once
         #test-exec-arg
         #test-exec-multiple
         #test-exec-missing
         #test-exec-bad-ptr
-
         #test-wait-simple
         #test-wait-twice
         #test-wait-killed
         #test-wait-bad-pid
-
         #test-multi-recurse
         #test-multi-child-fd
-
         #test-rox-simple
         #test-rox-child
         #test-rox-multichild
-
         #test-bad-read
         #test-bad-write
         #test-bad-read2
         #test-bad-write2
         #test-bad-jump
         #test-bad-jump2
-
         #test-lg-create
         #test-lg-full
         #test-lg-random
         #test-lg-seq-block
         #test-lg-seq-random
-
         #test-sm-create
         #test-sm-full 
         #test-sm-random
         #test-sm-seq-block 
         #test-sm-seq-random
-
-        #test-syn-read 
+        #test-syn-read
         #test-syn-remove 
         #test-syn-write
-
+        
         #test-pt-grow-stack
         #test-pt-grow-pusha
         #test-pt-grow-bad
@@ -124,7 +109,7 @@ main ()
         #test-pt-write-code
         #test-pt-write-code2
         #test-pt-grow-stk-sc
-
+        
         #test-page-linear
         #test-page-parallel
         #test-page-merge-seq
@@ -132,7 +117,7 @@ main ()
         #test-page-merge-stk
         #test-page-merge-mm
         #test-page-shuffle
-
+        
         #test-mmap-read
         #test-mmap-close
         #test-mmap-unmap
@@ -142,16 +127,15 @@ main ()
         #test-mmap-exit
         #test-mmap-shuffle
         #test-mmap-bad-fd
-        #test-mmap-clean
+        test-mmap-clean
         #test-mmap-inherit
-        #test-mmap-misalign
+        test-mmap-misalign
         #test-mmap-null
         #test-mmap-over-code
         #test-mmap-over-data
-        #test-mmap-over-stk
+        test-mmap-over-stk
         #test-mmap-remove
         #test-mmap-zero
-
         
         echo -e "\n   SCRIPT EXECUTION TERMINATED SUCCESSFULLY. \n"
         echo "Pass: $pass" 

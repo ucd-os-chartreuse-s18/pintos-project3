@@ -125,7 +125,6 @@ void thread_hash_init (void)
   keyed_hash_init (&thread_current ()->open_files_hash);
   keyed_hash_init (&thread_current ()->children_hash);
   keyed_hash_init (&thread_current ()->pages);
-  keyed_hash_init (&thread_current ()->mappings);
 }
 
 /* Called by the timer interrupt handler at each timer tick.
